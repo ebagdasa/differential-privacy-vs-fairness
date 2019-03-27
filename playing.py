@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     batch_size = 64
     lr = 0.01
-    momentum = 0.9
+    momentum = 0.99
     decay = 1e-5
 
     races = {'white': 0, 'black': 1, 'asian': 2, 'indian': 3, 'other': 4}
@@ -120,28 +120,28 @@ if __name__ == '__main__':
         race_loaders[i] = torch.utils.data.DataLoader(race_ds[i], batch_size=8, shuffle=True, num_workers=2)
 
 
-    for batch_size in [64]:
-        print(batch_size)
-        print(lr)
-        print(momentum)
-        trainloader = torch.utils.data.DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=2)
+    print(batch_size)
+    print(lr)
+    print(momentum)
+    trainloader = torch.utils.data.DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=2)
 
-        net = Res()
-        net.cuda()
+    net = Res()
+    net.cuda()
 
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum)
-        # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
 
-        name = f'{batch_size} {momentum} {lr} {decay}'
-        for epoch in range(50):  # loop over the dataset multiple times
-            train(trainloader, net, optimizer, None, epoch, name)
-            acc = test(net, epoch, name, testloader, vis=True)
+    name = f'{batch_size} {momentum} {lr} {decay}'
+    for epoch in range(50):  # loop over the dataset multiple times
+        train(trainloader, net, optimizer, None, epoch, name)
+        acc = test(net, epoch, name, testloader, vis=True, win=f'Momentum {momentum}')
 
-            if acc <= 60 and epoch>4:
-                break
-            # for i, loader in race_loaders.items():
-            #     print(inverted_races[i])
-            #     test(epoch, inverted_races[i], loader, vis=True, win=name)
+        if acc <= 60 and epoch>4:
+            break
+        for i, loader in race_loaders.items():
+            print(inverted_races[i])
+            test(net, epoch, inverted_races[i], loader, vis=True, win=name)
+
 
 
