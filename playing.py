@@ -1,9 +1,13 @@
+from datetime import datetime
+
 import torch
 import torchvision
 import shutil
 import os
 import torchvision.transforms as transforms
 from collections import defaultdict
+
+from helper import Helper
 from models.simple import Net
 import numpy as np
 import torch.nn as nn
@@ -12,13 +16,24 @@ import torch.optim as optim
 from tqdm import tqdm as tqdm
 import visdom
 import time
+import yaml
 vis = visdom.Visdom()
 torch.cuda.is_available()
 torch.cuda.device_count()
 
 import torchvision.models as models
+import logging  
+logger = logging.getLogger("logger")
+import random
 
-
+seed = 5
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+random.seed(seed)
+np.random.seed(seed)
 
 class Res(nn.Module):
     def __init__(self):
@@ -43,7 +58,7 @@ transform = transforms.Compose(
      normalize])
 
 if os.path.exists('data/utk/train_ds.pt') and os.path.exists('data/utk/test_ds.pt'):
-    print('DS already exists. Loading.')
+    logger.info('DS already exists. Loading.')
     train_ds = torch.load('data/utk/train_ds.pt')
     test_ds = torch.load('data/utk/test_ds.pt')
 else:
@@ -86,7 +101,7 @@ def test(net, epoch, name, testloader, vis=True, win='Test'):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    print(f'Accuracy of the network on the {total} test images: {100 * correct / total}')
+    logger.info(f'Accuracy of the network on the {total} test images: {100 * correct / total}')
     if vis:
         plot(epoch, 100*correct/total, name, win=win)
     return 100 * correct / total
@@ -107,31 +122,32 @@ def train_dp(trainloader, model, optimizer, scheduler, epoch, name):
         # forward + backward + optimize
         outputs = model(inputs)
         loss = criterion(outputs, labels)
+        running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
         saved_var = dict()
-        for name, tensor in model.named_parameters():
-            saved_var[name] = torch.zeros_like(tensor)
+        for tensor_name, tensor in model.named_parameters():
+            saved_var[tensor_name] = torch.zeros_like(tensor)
 
-        for i in losses:
-            i.backward(retain_graph=True)
+        for j in losses:
+            j.backward(retain_graph=True)
             # total_norm=compute_norm(model)
 
             torch.nn.utils.clip_grad_norm_(model.parameters(), S)
-            for name, tensor in model.named_parameters():
+            for tensor_name, tensor in model.named_parameters():
                 new_grad = tensor.grad
-                saved_var[name].add_(new_grad)
+                saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
-        for name, tensor in net.named_parameters():
-            saved_var[name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
-            tensor.grad = saved_var[name] / num_microbatches
+        for tensor_name, tensor in model.named_parameters():
+            saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+            tensor.grad = saved_var[tensor_name] / num_microbatches
         optimizer.step()
-        running_loss += torch.sum(loss).item()
+
         if i > 0 and i % 20 == 0:  # print every 2000 mini-batches
-            #             print('[%d, %5d] loss: %.3f' %
+            #             logger.info('[%d, %5d] loss: %.3f' %
             #                   (epoch + 1, i + 1, running_loss / 2000))
-            plot(epoch * len(trainloader) + i, running_loss, name, win='Train')
+            plot(epoch * len(trainloader) + i, running_loss, name, win='Train Loss')
             running_loss = 0.0
 
 def train(trainloader, model, optimizer, scheduler, epoch, name):
@@ -151,36 +167,42 @@ def train(trainloader, model, optimizer, scheduler, epoch, name):
         loss = criterion(outputs, labels)
 
         loss.backward()
-        # print(f'inputs shape: {inputs.shape}')
-        # print(f'outputs shape: {outputs.shape}')
-        # print(f'labels shape: {labels.shape}')
-        # print(f'Loss shape: {loss.shape}')
+        # logger.info(f'inputs shape: {inputs.shape}')
+        # logger.info(f'outputs shape: {outputs.shape}')
+        # logger.info(f'labels shape: {labels.shape}')
+        # logger.info(f'Loss shape: {loss.shape}')
         # for key, value in model.named_parameters():
-        #     print(f'{key}: {value.shape}')
+        #     logger.info(f'{key}: {value.shape}')
         optimizer.step()
         # scheduler.step()
 
         # print statistics
         running_loss += loss.item()
         if i > 0 and i % 20 == 0:  # print every 2000 mini-batches
-            #             print('[%d, %5d] loss: %.3f' %
+            #             logger.info('[%d, %5d] loss: %.3f' %
             #                   (epoch + 1, i + 1, running_loss / 2000))
-            plot(epoch * len(trainloader) + i, running_loss, name, win='Train')
+            plot(epoch * len(trainloader) + i, running_loss, name, win='Train Loss')
             running_loss = 0.0
 
 
 
 if __name__ == '__main__':
 
-    batch_size = 64
-    num_microbatches = 16
-    lr = 0.01
-    momentum = 0.99
-    decay = 1e-5
-    S = 100
-    z = 0.00001
+    with open('utils/params.yaml') as f:
+        params = yaml.load(f)
+    helper = Helper(current_time=datetime.now().strftime('%b.%d_%H.%M.%S'), params=params, name='utk')
+    batch_size = int(helper.params['batch_size'])
+    num_microbatches = int(helper.params['num_microbatches'])
+    lr = float(helper.params['lr'])
+    momentum = float(helper.params['momentum'])
+    decay = float(helper.params['decay'])
+    epochs = int(helper.params['epochs'])
+    S = float(helper.params['S'])
+    z = float(helper.params['z'])
     sigma = z*S
-    dp = True
+    dp = helper.params['dp']
+    logger.info(f'DP: {dp}')
+
 
     races = {'white': 0, 'black': 1, 'asian': 2, 'indian': 3, 'other': 4}
     inverted_races = dict([[v, k] for k, v in races.items()])
@@ -192,9 +214,9 @@ if __name__ == '__main__':
         race_loaders[i] = torch.utils.data.DataLoader(race_ds[i], batch_size=8, shuffle=True, num_workers=2)
 
 
-    print(batch_size)
-    print(lr)
-    print(momentum)
+    logger.info(batch_size)
+    logger.info(lr)
+    logger.info(momentum)
     trainloader = torch.utils.data.DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=2, drop_last=True)
 
     net = Net()
@@ -205,20 +227,19 @@ if __name__ == '__main__':
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
     # scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[4, 8, 16], gamma=0.1)
-    name = f'{batch_size} {momentum} {lr} {decay} {num_microbatches}'
-    acc = test(net, 0, name, testloader, vis=True, win=f'Momentum {momentum}')
-    for epoch in range(50):  # loop over the dataset multiple times
+    name = f'{batch_size} {momentum} {lr} {decay} {num_microbatches} {S} {z} {dp}'
+    acc = test(net, 0, name, testloader, vis=True, win=helper.current_time)
+    for epoch in range(1,epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(trainloader, net, optimizer, None, epoch, name)
         else:
             train(trainloader, net, optimizer, None, epoch, name)
-        acc = test(net, epoch, name, testloader, vis=True, win=f'Momentum {momentum}')
+        acc = test(net, epoch, name, testloader, vis=True, win=helper.current_time)
 
-        if acc <= 60 and epoch>4:
-            break
-        # for i, loader in race_loaders.items():
-        #     print(inverted_races[i])
-        #     test(net, epoch, inverted_races[i], loader, vis=True, win=name)
-
+        # if acc <= 60 and epoch>4:
+        #     break
+        for i, loader in race_loaders.items():
+            logger.info(inverted_races[i])
+            test(net, epoch, inverted_races[i], loader, vis=True, win=name)
 
 

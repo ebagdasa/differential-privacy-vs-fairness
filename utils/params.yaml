@@ -1,0 +1,10 @@
+
+batch_size: 64
+num_microbatches: 64
+lr: 0.01
+momentum: 0.99
+decay: 1e-5
+S: 2
+z: 0.1
+dp: False
+epochs: 60
