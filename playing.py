@@ -30,18 +30,19 @@ import logging
 logger = logging.getLogger("logger")
 import random
 
-seed = 5
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-random.seed(seed)
-np.random.seed(seed)
+def reseed(seed=5):
+    seed = 5
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
 
 class Res(nn.Module):
     def __init__(self):
-        torch.manual_seed(5)
+        reseed()
         super(Res, self).__init__()
         self.res = models.resnet18(pretrained=False)
         # self.fc = nn.Linear(1000, 2)
@@ -82,7 +83,7 @@ def test(net, epoch, name, testloader, vis=True, win='Test'):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    logger.info(f'Epoch {epoch}. acc: {100 * correct / total}')
+    logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
     if vis:
         plot(epoch, 100*correct/total, name, win=win)
     return 100 * correct / total
@@ -169,6 +170,7 @@ if __name__ == '__main__':
     z = float(helper.params['z'])
     sigma = z*S
     dp = helper.params['dp']
+    mu = helper.params['mu']
     logger.info(f'DP: {dp}')
 
 
@@ -176,8 +178,10 @@ if __name__ == '__main__':
     logger.info(batch_size)
     logger.info(lr)
     logger.info(momentum)
-    helper.load_data()
+    helper.load_cifar_data()
     helper.create_loaders()
+    helper.sampler_per_class()
+    helper.sampler_exponential_class(mu=mu)
 
     net = Res()
     net.cuda()
@@ -191,8 +195,8 @@ if __name__ == '__main__':
                                                                  0.75 * epochs],
                                                      gamma=0.1)
 
-    win_name = f'S: {S}, z: {z}, DP: {dp}, BS: {batch_size}, Mom: {momentum}, LR: {lr}, DEC:{decay}, ' \
-        f'MB: {num_microbatches}.'
+    win_name = f'DP: {dp}, S: {S}, z: {z}, BS: {batch_size}, Mom: {momentum}, LR: {lr}, DEC:{decay}, ' \
+        f'MB: {num_microbatches}, mu: {mu}.'
     name = helper.current_time
 
     acc = test(net, 0, name, helper.test_loader, vis=True, win=win_name)
@@ -203,6 +207,14 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch, name)
         scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True, win=win_name)
+        acc_list = list()
+        for class_no, loader in helper.per_class_loader.items():
+            acc_list.append(test(net, epoch, class_no, loader, vis=False, win=win_name))
+        plot(epoch, np.var(acc_list), name=name + '_var', win=win_name + '_class_acc')
+        plot(epoch, np.max(acc_list), name=name + '_max', win=win_name + '_class_acc')
+        plot(epoch, np.min(acc_list), name=name + '_min', win=win_name + '_class_acc')
+        helper.save_model(net, epoch, acc)
+
 
 
 

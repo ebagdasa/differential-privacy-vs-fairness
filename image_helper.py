@@ -22,7 +22,38 @@ class ImageHelper(Helper):
     def poison(self):
         return
 
-    def load_data(self):
+    def sampler_per_class(self):
+        self.per_class_loader = dict()
+        per_class_list = defaultdict(list)
+        for ind, x in enumerate(self.test_dataset):
+            _, label = x
+            per_class_list[label].append(ind)
+        for key, indices in per_class_list.items():
+            self.per_class_loader[key] = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
+                'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
+
+
+    def sampler_exponential_class(self, mu=1):
+        per_class_list = defaultdict(list)
+        for ind, x in enumerate(self.train_dataset):
+            _, label = x
+
+            per_class_list[label].append(ind)
+
+        ds_indices = list()
+        subset_lengths = list()
+        for key, indices in per_class_list.items():
+            random.shuffle(indices)
+            subset_len = len(indices) * (mu ** key)
+            subset_lengths.append(subset_len)
+            logger.info(f'Key: {key}, len: {subset_len}')
+            ds_indices.extend(indices[:subset_len])
+        logger.info(f'Imbalance: {max(subset_lengths)/min(subset_lengths)}')
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
+            'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices))
+
+
+    def load_cifar_data(self):
         logger.info('Loading data')
 
         ### data load
@@ -42,6 +73,7 @@ class ImageHelper(Helper):
                                               transform=transform_train)
 
         self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
+
         return
 
     def create_loaders(self):
@@ -65,10 +97,10 @@ class ImageHelper(Helper):
             self.train_dataset = torch.load('data/utk/train_ds.pt')
             self.test_dataset = torch.load('data/utk/test_ds.pt')
         else:
-            train_ds = torchvision.datasets.ImageFolder('data/utk/clustered/gender/', transform=transform)
-            torch.save(train_ds, 'data/utk/train_ds.pt')
-            test_ds = torchvision.datasets.ImageFolder('data/utk/test/gender/', transform=transform)
-            torch.save(train_ds, 'data/utk/test_ds.pt')
+            self.train_dataset = torchvision.datasets.ImageFolder('data/utk/clustered/gender/', transform=transform)
+            torch.save(self.train_dataset, 'data/utk/train_ds.pt')
+            self.test_dataset = torchvision.datasets.ImageFolder('data/utk/test/gender/', transform=transform)
+            torch.save(self.test_dataset, 'data/utk/test_ds.pt')
 
         self.races = {'white': 0, 'black': 1, 'asian': 2, 'indian': 3, 'other': 4}
         self.inverted_races = dict([[v, k] for k, v in self.races.items()])
