@@ -32,7 +32,7 @@ class Helper:
         except FileExistsError:
             logger.info('Folder already exists')
         logger.addHandler(logging.FileHandler(filename=f'{self.folder_path}/log.txt'))
-        logger.addHandler(logging.StreamHandler())
+        # logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.DEBUG)
         logger.info(f'current path: {self.folder_path}')
         if not self.params.get('environment_name', False):
