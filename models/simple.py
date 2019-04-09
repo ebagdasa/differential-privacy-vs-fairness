@@ -7,6 +7,18 @@ from torchvision import datasets, transforms
 from torch.autograd import Variable
 import numpy as np
 import datetime
+import random
+
+
+def reseed(seed=5):
+    seed = 5
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
 
 
 class SimpleNet(nn.Module):
@@ -14,6 +26,7 @@ class SimpleNet(nn.Module):
         super(SimpleNet, self).__init__()
         self.created_time = created_time
         self.name=name
+        reseed()
 
 
 

@@ -1,6 +1,6 @@
 test_batch_size: 100
 batch_size: 128
-num_microbatches: 64
+num_microbatches: 16
 lr: 0.1
 momentum: 0.9
 decay: 5e-4
@@ -11,3 +11,6 @@ epochs: 300
 save_on_epochs: [10, 50, 100, 200]
 mu: 1
 save_model: True
+cifar10: True
+model: resnet
+densenet_depth: 100

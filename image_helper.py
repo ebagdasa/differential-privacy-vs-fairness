@@ -27,9 +27,9 @@ class ImageHelper(Helper):
         per_class_list = defaultdict(list)
         for ind, x in enumerate(self.test_dataset):
             _, label = x
-            per_class_list[label].append(ind)
+            per_class_list[int(label)].append(ind)
         for key, indices in per_class_list.items():
-            self.per_class_loader[key] = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
+            self.per_class_loader[int(key)] = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
 
@@ -53,7 +53,7 @@ class ImageHelper(Helper):
             'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
 
 
-    def load_cifar_data(self):
+    def load_cifar_data(self, cifar10=True):
         logger.info('Loading data')
 
         ### data load
@@ -68,11 +68,15 @@ class ImageHelper(Helper):
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
+        if cifar10:
+            self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
+                                                   transform=transform_train)
+            self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
 
-        self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
-                                              transform=transform_train)
-
-        self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
+        else:
+            self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
+                                                  transform=transform_train)
+            self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
 
         return
 
