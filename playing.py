@@ -78,7 +78,7 @@ def test(net, epoch, name, testloader, vis=True):
     return 100 * correct / total
 
 
-def train_dp(trainloader, model, optimizer, epoch, name):
+def train_dp(trainloader, model, optimizer, epoch):
     norm_type = 2
     model.train()
     running_loss = 0.0
@@ -113,11 +113,11 @@ def train_dp(trainloader, model, optimizer, epoch, name):
         if i > 0 and i % 20 == 0:
             #             logger.info('[%d, %5d] loss: %.3f' %
             #                   (epoch + 1, i + 1, running_loss / 2000))
-            plot(epoch * len(trainloader) + i, running_loss, name)
+            plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
 
 
-def train(trainloader, model, optimizer, epoch, name):
+def train(trainloader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
@@ -193,9 +193,9 @@ if __name__ == '__main__':
     acc = test(net, 0, name, helper.test_loader, vis=True)
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
-            train_dp(helper.train_loader, net, optimizer, epoch, name)
+            train_dp(helper.train_loader, net, optimizer, epoch)
         else:
-            train(helper.train_loader, net, optimizer, epoch, name)
+            train(helper.train_loader, net, optimizer, epoch)
         scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True)
         acc_list = list()
