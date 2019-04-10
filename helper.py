@@ -65,3 +65,12 @@ class Helper:
 
         if is_best:
             copyfile(filename, 'model_best.pth.tar')
+
+    @staticmethod
+    def norm(parameters, max_norm):
+        total_norm = 0
+        for p in parameters:
+            torch.sum(torch.pow(p))
+        clip_coef = max_norm / (total_norm + 1e-6)
+        for p in parameters:
+            p.grad.data.mul_(clip_coef)

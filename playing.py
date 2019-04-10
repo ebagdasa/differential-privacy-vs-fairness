@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+import argparse
 
 import torch
 import torchvision
@@ -117,6 +118,14 @@ def train_dp(trainloader, model, optimizer, epoch):
             running_loss = 0.0
 
 
+def clip_grad(parameters, max_norm, norm_type=2):
+    parameters = list(filter(lambda p: p.grad is not None, parameters))
+    total_norm = 0
+    for p in parameters:
+        param_norm = p.grad.data.norm(norm_type)
+        total_norm += param_norm.item() ** norm_type
+
+
 def train(trainloader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
@@ -144,8 +153,11 @@ def train(trainloader, model, optimizer, epoch):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='PPDL')
+    parser.add_argument('--params', dest='params', default='utils/params.yaml')
+    args = parser.parse_args()
 
-    with open('utils/params.yaml') as f:
+    with open(args.params) as f:
         params = yaml.load(f)
     helper = ImageHelper(current_time=datetime.now().strftime('%b.%d_%H.%M.%S'), params=params, name='utk')
     batch_size = int(helper.params['batch_size'])
@@ -164,16 +176,17 @@ if __name__ == '__main__':
     logger.info(batch_size)
     logger.info(lr)
     logger.info(momentum)
-    helper.load_cifar_data()
+    helper.load_cifar_data(dataset=params['dataset'])
     helper.create_loaders()
     helper.sampler_per_class()
     helper.sampler_exponential_class(mu=mu)
-    num_classes = 10 if helper.params['cifar10'] else 100
+    num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
         net = models.resnet18(num_classes=num_classes)
-
+    else:
+        net = Net()
 
     net.cuda()
     if dp:

@@ -32,7 +32,6 @@ class ImageHelper(Helper):
             self.per_class_loader[int(key)] = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
-
     def sampler_exponential_class(self, mu=1):
         per_class_list = defaultdict(list)
         for ind, x in enumerate(self.train_dataset):
@@ -44,16 +43,15 @@ class ImageHelper(Helper):
         subset_lengths = list()
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            subset_len = len(indices) * (mu ** key)
+            subset_len = int(len(indices) * (mu ** key))
             subset_lengths.append(subset_len)
             logger.info(f'Key: {key}, len: {subset_len}')
             ds_indices.extend(indices[:subset_len])
-        logger.info(f'Imbalance: {max(subset_lengths)/min(subset_lengths)}')
+        logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
             'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
 
-
-    def load_cifar_data(self, cifar10=True):
+    def load_cifar_data(self, dataset):
         logger.info('Loading data')
 
         ### data load
@@ -68,15 +66,25 @@ class ImageHelper(Helper):
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-        if cifar10:
+        if dataset == 'cifar10':
             self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
-                                                   transform=transform_train)
+                                                  transform=transform_train)
             self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
 
-        else:
+        elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
-                                                  transform=transform_train)
+                                                   transform=transform_train)
             self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
+        elif dataset == 'mnist':
+            self.train_dataset = datasets.MNIST('../data', train=True, download=True,
+                                                transform=transforms.Compose([
+                                                    transforms.ToTensor(),
+                                                    transforms.Normalize((0.1307,), (0.3081,))
+                                                ]))
+            self.test_dataset = datasets.MNIST('../data', train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))
+            ]))
 
         return
 
