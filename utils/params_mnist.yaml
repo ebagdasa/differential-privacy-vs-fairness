@@ -1,15 +1,15 @@
 test_batch_size: 100
 batch_size: 256
-num_microbatches: 64
+num_microbatches: 256
 lr: 0.15
 momentum: 0.5
 decay: 0
 S: 1
 z: 1.1
-dp: True
+dp: False
 epochs: 120
 save_on_epochs: [10, 50, 100, 200]
-mu: 0.8
+mu: 0.5
 save_model: False
 dataset: mnist
 model: net
