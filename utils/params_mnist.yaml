@@ -9,7 +9,7 @@ z: 0.9
 dp: True
 epochs: 120
 save_on_epochs: [10, 50, 100, 200]
-mu: 0.9
+mu: 0.6
 save_model: False
 dataset: mnist
 model: net

@@ -130,3 +130,9 @@ def clip_grad_norm_dp(named_parameters, target_params, max_norm, norm_type=2):
         for p in parameters:
             p.grad.data.mul_(clip_coef)
     return total_norm
+
+def create_table(params: dict):
+    header = f"| {' | '.join([x[:10] for x in params.keys()])} |"
+    line = f"|{'|:'.join([3*'-' for x in range(len(params.keys()))])}|"
+    values = f"| {' | '.join([str(x) for x in params.values()])} |"
+    return '\n'.join([header, line, values])

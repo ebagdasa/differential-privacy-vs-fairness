@@ -26,7 +26,7 @@ import random
 import yaml
 
 from models.resnet import Res, PretrainedRes
-from utils.utils import dict_html
+from utils.utils import dict_html, create_table
 
 writer = SummaryWriter()
 layout = {'accuracy_per_class': {
@@ -199,8 +199,8 @@ if __name__ == '__main__':
                                                                  0.75 * epochs],
                                                      gamma=0.1)
 
-
-    writer.add_text('Model Params', json.dumps(helper.params))
+    table = create_table(helper.params)
+    writer.add_text('Model Params', table)
     name = "accuracy"
 
     for epoch in range(1, epochs):  # loop over the dataset multiple times
