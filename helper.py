@@ -5,10 +5,11 @@ import torch
 
 from torch.autograd import Variable
 import logging
+logger = logging.getLogger(__name__)
 
 from torch.nn.functional import log_softmax
 import torch.nn.functional as F
-logger = logging.getLogger("logger")
+
 import os
 
 
@@ -32,7 +33,7 @@ class Helper:
         except FileExistsError:
             logger.info('Folder already exists')
         logger.addHandler(logging.FileHandler(filename=f'{self.folder_path}/log.txt'))
-        # logger.addHandler(logging.StreamHandler())
+        logger.addHandler(logging.StreamHandler())
         logger.setLevel(logging.DEBUG)
         logger.info(f'current path: {self.folder_path}')
         if not self.params.get('environment_name', False):

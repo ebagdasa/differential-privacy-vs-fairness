@@ -39,9 +39,7 @@ torch.cuda.is_available()
 torch.cuda.device_count()
 
 import logging
-
-logger = logging.getLogger("logger")
-
+logger = logging.getLogger(__name__)
 
 
 
@@ -179,7 +177,7 @@ if __name__ == '__main__':
     helper.load_cifar_data(dataset=params['dataset'])
     helper.create_loaders()
     helper.sampler_per_class()
-    helper.sampler_exponential_class(mu=mu)
+    helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
     num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])

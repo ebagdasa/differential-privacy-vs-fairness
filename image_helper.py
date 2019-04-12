@@ -8,12 +8,13 @@ import torch.utils.data
 from helper import Helper
 import random
 import logging
+logger = logging.getLogger(__name__)
+
 from torchvision import datasets, transforms
 import numpy as np
 
 from models.simple import SimpleNet
-
-logger = logging.getLogger("logger")
+from collections import OrderedDict
 POISONED_PARTICIPANT_POS = 0
 
 
@@ -23,30 +24,42 @@ class ImageHelper(Helper):
         return
 
     def sampler_per_class(self):
-        self.per_class_loader = dict()
+        self.per_class_loader = OrderedDict()
         per_class_list = defaultdict(list)
         for ind, x in enumerate(self.test_dataset):
             _, label = x
             per_class_list[int(label)].append(ind)
+        per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         for key, indices in per_class_list.items():
             self.per_class_loader[int(key)] = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
-    def sampler_exponential_class(self, mu=1):
+    def sampler_exponential_class(self, mu=1, total_number=40000):
         per_class_list = defaultdict(list)
+        sum = 0
         for ind, x in enumerate(self.train_dataset):
             _, label = x
-
-            per_class_list[label].append(ind)
-
+            sum +=1
+            per_class_list[int(label)].append(ind)
+        per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
+        unbalanced_sum = 0
+        for key, indices in per_class_list.items():
+            unbalanced_sum += int(len(indices) * (mu ** key))
+        if total_number/unbalanced_sum > 1:
+            raise ValueError(f"Expected at least {total_number} elements, after sampling left only: {unbalanced_sum}.")
+        proportion = total_number/unbalanced_sum
+        logger.info(sum)
         ds_indices = list()
         subset_lengths = list()
+        sum = 0
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            subset_len = int(len(indices) * (mu ** key))
+            subset_len = int(len(indices) * (mu ** key) * proportion)
+            sum += subset_len
             subset_lengths.append(subset_len)
-            logger.info(f'Key: {key}, len: {subset_len}')
+            logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
             ds_indices.extend(indices[:subset_len])
+        logger.info(sum)
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
             'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
