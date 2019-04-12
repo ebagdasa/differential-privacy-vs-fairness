@@ -14,3 +14,4 @@ save_model: False
 dataset: mnist
 model: net
 densenet_depth: 100
+scheduler: True

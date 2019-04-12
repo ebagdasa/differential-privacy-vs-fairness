@@ -203,13 +203,13 @@ if __name__ == '__main__':
     writer.add_text('Model Params', json.dumps(helper.params))
     name = "accuracy"
 
-    acc = test(net, 0, name, helper.test_loader, vis=True)
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
         else:
             train(helper.train_loader, net, optimizer, epoch)
-        scheduler.step()
+        if helper.params['scheduler']:
+            scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True)
         acc_list = list()
         for class_no, loader in helper.per_class_loader.items():
