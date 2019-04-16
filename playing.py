@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger('logger')
 
 import json
@@ -12,7 +13,6 @@ import torchvision.transforms as transforms
 from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
-
 
 from helper import Helper
 from image_helper import ImageHelper
@@ -43,11 +43,8 @@ torch.cuda.is_available()
 torch.cuda.device_count()
 
 
-
-
 def plot(x, y, name):
     writer.add_scalar(tag=name, scalar_value=y, global_step=x)
-
 
 
 def compute_norm(model, norm_type=2):
@@ -183,8 +180,10 @@ if __name__ == '__main__':
     helper.load_cifar_data(dataset=params['dataset'])
     helper.create_loaders()
     helper.sampler_per_class()
-    helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
-    helper.sampler_exponential_class_test(mu=mu, total_number=params['ds_size'])
+    helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
+                                     number_of_entries=params['number_of_entries'])
+    helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
+                                          number_of_entries_test=params['number_of_entries_test'])
     helper.compute_rdp()
     num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
     if helper.params['model'] == 'densenet':
@@ -229,6 +228,5 @@ if __name__ == '__main__':
         unbalanced_acc = test(net, epoch, 'unbalanced', helper.test_loader_unbalanced, vis=False)
         plot(epoch, unbalanced_acc, name='accuracy_per_class/unbalanced')
 
-
-
         helper.save_model(net, epoch, acc)
+    logger.info(f"Finished training for model: {helper.current_time}")
