@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger('logger')
+
 import json
 from datetime import datetime
 import argparse
@@ -32,14 +35,13 @@ writer = SummaryWriter()
 layout = {'accuracy_per_class': {
     'accuracy_per_class': ['Multiline', ['accuracy_per_class/accuracy_var',
                                          'accuracy_per_class/accuracy_min',
-                                         'accuracy_per_class/accuracy_max']]}}
+                                         'accuracy_per_class/accuracy_max',
+                                         'accuracy_per_class/unbalanced']]}}
 writer.add_custom_scalars(layout)
 
 torch.cuda.is_available()
 torch.cuda.device_count()
 
-import logging
-logger = logging.getLogger(__name__)
 
 
 
@@ -158,6 +160,10 @@ if __name__ == '__main__':
     with open(args.params) as f:
         params = yaml.load(f)
     helper = ImageHelper(current_time=datetime.now().strftime('%b.%d_%H.%M.%S'), params=params, name='utk')
+    logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
+    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.DEBUG)
+    logger.info(f'current path: {helper.folder_path}')
     batch_size = int(helper.params['batch_size'])
     num_microbatches = int(helper.params['num_microbatches'])
     lr = float(helper.params['lr'])
@@ -178,6 +184,8 @@ if __name__ == '__main__':
     helper.create_loaders()
     helper.sampler_per_class()
     helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
+    helper.sampler_exponential_class_test(mu=mu, total_number=params['ds_size'])
+    helper.compute_rdp()
     num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
@@ -210,10 +218,17 @@ if __name__ == '__main__':
             scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True)
         acc_list = list()
+
         for class_no, loader in helper.per_class_loader.items():
-            acc_list.append(test(net, epoch, class_no, loader, vis=False))
+            class_acc = test(net, epoch, class_no, loader, vis=False)
+            acc_list.append(class_acc)
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
         plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
+
+        unbalanced_acc = test(net, epoch, 'unbalanced', helper.test_loader_unbalanced, vis=False)
+        plot(epoch, unbalanced_acc, name='accuracy_per_class/unbalanced')
+
+
 
         helper.save_model(net, epoch, acc)

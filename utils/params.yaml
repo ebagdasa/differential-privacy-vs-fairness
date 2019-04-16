@@ -1,6 +1,6 @@
 test_batch_size: 100
 batch_size: 64
-num_microbatches: 8
+num_microbatches: 64
 lr: 0.1
 momentum: 0.9
 decay: 5e-4
@@ -10,11 +10,11 @@ dp: False
 epochs: 60
 save_on_epochs: [10, 50, 100, 200]
 
-mu: 0.9
+mu: 0.8
 ds_size: 27000
 
 save_model: False
-dataset: mnist
-model: net
+dataset: cifar10
+model: resnet
 densenet_depth: 100
 scheduler: True

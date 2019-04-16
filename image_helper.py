@@ -1,3 +1,7 @@
+import logging
+logger = logging.getLogger('logger')
+
+
 from collections import defaultdict
 
 import torch
@@ -7,8 +11,6 @@ import torch.utils.data
 
 from helper import Helper
 import random
-import logging
-logger = logging.getLogger(__name__)
 
 from torchvision import datasets, transforms
 import numpy as np
@@ -59,10 +61,43 @@ class ImageHelper(Helper):
             subset_lengths.append(subset_len)
             logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
             ds_indices.extend(indices[:subset_len])
-        logger.info(sum)
+        print(sum)
+        self.dataset_size = sum
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
             'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
+
+
+    def sampler_exponential_class_test(self, mu=1, total_number=10000):
+        per_class_list = defaultdict(list)
+        sum = 0
+        for ind, x in enumerate(self.test_dataset):
+            _, label = x
+            sum +=1
+            per_class_list[int(label)].append(ind)
+        per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
+        unbalanced_sum = 0
+        for key, indices in per_class_list.items():
+            unbalanced_sum += int(len(indices) * (mu ** key))
+
+        proportion = 1
+        logger.info(sum)
+        ds_indices = list()
+        subset_lengths = list()
+        sum = 0
+        for key, indices in per_class_list.items():
+            random.shuffle(indices)
+            subset_len = int(len(indices) * (mu ** key) * proportion)
+            sum += subset_len
+            subset_lengths.append(subset_len)
+            logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
+            ds_indices.extend(indices[:subset_len])
+        logger.info(sum)
+        logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
+        self.test_loader_unbalanced = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
+            'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
+
+
 
     def load_cifar_data(self, dataset):
         logger.info('Loading data')
@@ -98,7 +133,7 @@ class ImageHelper(Helper):
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))
             ]))
-
+        self.dataset_size = len(self.train_dataset)
         return
 
     def create_loaders(self):

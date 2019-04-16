@@ -1,11 +1,13 @@
+import logging
+logger = logging.getLogger('logger')
+
 from shutil import copyfile
 
 import math
 import torch
 
 from torch.autograd import Variable
-import logging
-logger = logging.getLogger(__name__)
+
 
 from torch.nn.functional import log_softmax
 import torch.nn.functional as F
@@ -18,9 +20,9 @@ class Helper:
         self.current_time = current_time
         self.target_model = None
         self.local_model = None
-
-        self.train_data = None
-        self.test_data = None
+        self.dataset_size = 0
+        self.train_dataset = None
+        self.test_dataset = None
         self.poisoned_data = None
         self.test_data_poison = None
 
@@ -32,10 +34,7 @@ class Helper:
             os.mkdir(self.folder_path)
         except FileExistsError:
             logger.info('Folder already exists')
-        logger.addHandler(logging.FileHandler(filename=f'{self.folder_path}/log.txt'))
-        logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.DEBUG)
-        logger.info(f'current path: {self.folder_path}')
+
         if not self.params.get('environment_name', False):
             self.params['environment_name'] = self.name
 
@@ -75,3 +74,19 @@ class Helper:
         clip_coef = max_norm / (total_norm + 1e-6)
         for p in parameters:
             p.grad.data.mul_(clip_coef)
+
+
+    def compute_rdp(self):
+        from tfcode.compute_dp_sgd_privacy import apply_dp_sgd_analysis
+
+        N = self.dataset_size
+        logger.info(f'Dataset size: {N}. Computing RDP guarantees.')
+        q = self.params['batch_size'] / N  # q - the sampling ratio.
+
+
+        orders = ([1.25, 1.5, 1.75, 2., 2.25, 2.5, 3., 3.5, 4., 4.5] +
+                  list(range(5, 64)) + [128, 256, 512])
+
+        steps = int(math.ceil(self.params['epochs'] * N / self.params['batch_size']))
+
+        apply_dp_sgd_analysis(q, self.params['z'], steps, orders, 1e-6)
