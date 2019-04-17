@@ -10,7 +10,7 @@ import torch
 import torchvision
 import os
 import torchvision.transforms as transforms
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
 
@@ -80,6 +80,7 @@ def train_dp(trainloader, model, optimizer, epoch):
     norm_type = 2
     model.train()
     running_loss = 0.0
+    label_norms = defaultdict(list)
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         inputs, labels = data
         inputs = inputs.cuda()
@@ -95,9 +96,11 @@ def train_dp(trainloader, model, optimizer, epoch):
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
 
-        for j in losses:
+        for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+            total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+            label_norms[int(labels[pos])].append(total_norm)
+
             for tensor_name, tensor in model.named_parameters():
                 new_grad = tensor.grad
                 saved_var[tensor_name].add_(new_grad)
@@ -113,6 +116,10 @@ def train_dp(trainloader, model, optimizer, epoch):
             #                   (epoch + 1, i + 1, running_loss / 2000))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
+
+    for pos in label_norms.keys():
+        print(f"{pos}: {np.mean(label_norms[pos])}")
+        plot(epoch, np.mean(label_norms[pos]), f'norms/class_{pos}')
 
 
 def clip_grad(parameters, max_norm, norm_type=2):

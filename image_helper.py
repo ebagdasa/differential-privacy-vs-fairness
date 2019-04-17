@@ -69,7 +69,7 @@ class ImageHelper(Helper):
             random.shuffle(indices)
             if key and key != key_to_drop:
                 subset_len = len(indices)
-            elif key and key != key_to_drop:
+            elif key and key == key_to_drop:
                 subset_len = number_of_entries
             else:
                 subset_len = int(len(indices) * (mu ** key) * proportion)
