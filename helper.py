@@ -1,16 +1,11 @@
 import logging
+
 logger = logging.getLogger('logger')
 
 from shutil import copyfile
 
 import math
 import torch
-
-from torch.autograd import Variable
-
-
-from torch.nn.functional import log_softmax
-import torch.nn.functional as F
 
 import os
 
@@ -75,14 +70,12 @@ class Helper:
         for p in parameters:
             p.grad.data.mul_(clip_coef)
 
-
     def compute_rdp(self):
-        from tfcode.compute_dp_sgd_privacy import apply_dp_sgd_analysis
+        from compute_dp_sgd_privacy import apply_dp_sgd_analysis
 
         N = self.dataset_size
         logger.info(f'Dataset size: {N}. Computing RDP guarantees.')
         q = self.params['batch_size'] / N  # q - the sampling ratio.
-
 
         orders = ([1.25, 1.5, 1.75, 2., 2.25, 2.5, 3., 3.5, 4., 4.5] +
                   list(range(5, 64)) + [128, 256, 512])
@@ -90,3 +83,56 @@ class Helper:
         steps = int(math.ceil(self.params['epochs'] * N / self.params['batch_size']))
 
         apply_dp_sgd_analysis(q, self.params['z'], steps, orders, 1e-6)
+
+    @staticmethod
+    def clip_grad(parameters, max_norm, norm_type=2):
+        parameters = list(filter(lambda p: p.grad is not None, parameters))
+        total_norm = 0
+        for p in parameters:
+            param_norm = p.grad.data.norm(norm_type)
+            total_norm += param_norm.item() ** norm_type
+        total_norm = total_norm ** (1. / norm_type)
+
+        clip_coef = max_norm / (total_norm + 1e-6)
+        if clip_coef < 1:
+            for p in parameters:
+                p.grad.data.mul_(clip_coef)
+        return total_norm
+
+    @staticmethod
+    def clip_grad_scale_by_layer_norm(parameters, max_norm, norm_type=2):
+        parameters = list(filter(lambda p: p.grad is not None, parameters))
+
+        total_norm_weight = 0
+        norm_weight = dict()
+        for i, p in enumerate(parameters):
+            param_norm = p.data.norm(norm_type)
+            norm_weight[i] = param_norm.item()
+            total_norm_weight += param_norm.item() ** norm_type
+        total_norm_weight = total_norm_weight ** (1. / norm_type)
+
+        total_norm = 0
+        norm_grad = dict()
+        for i, p in enumerate(parameters):
+            param_norm = p.grad.data.norm(norm_type)
+            norm_grad[i] = param_norm.item()
+            total_norm += param_norm.item() ** norm_type
+        total_norm = total_norm ** (1. / norm_type)
+
+        clip_coef = max_norm / (total_norm + 1e-6)
+        if clip_coef < 1:
+            for i, p in enumerate(parameters):
+                if norm_grad[i] < 1e-3:
+                    continue
+                scale = norm_weight[i] / total_norm_weight
+                p.grad.data.mul_(math.sqrt(max_norm) * scale / norm_grad[i])
+        # print(total_norm)
+        # total_norm = 0
+        # norm_grad = dict()
+        # for i, p in enumerate(parameters):
+        #     param_norm = p.grad.data.norm (norm_type)
+        #     norm_grad[i] = param_norm
+        #     total_norm += param_norm.item() ** norm_type
+        # total_norm = total_norm ** (1. / norm_type)
+        # print(total_norm)
+        return total_norm

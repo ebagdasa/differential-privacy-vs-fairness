@@ -31,16 +31,15 @@ import yaml
 from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table
 
-writer = SummaryWriter()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
 layout = {'accuracy_per_class': {
     'accuracy_per_class': ['Multiline', ['accuracy_per_class/accuracy_var',
                                          'accuracy_per_class/accuracy_min',
                                          'accuracy_per_class/accuracy_max',
                                          'accuracy_per_class/unbalanced']]}}
-writer.add_custom_scalars(layout)
 
-torch.cuda.is_available()
-torch.cuda.device_count()
 
 
 def plot(x, y, name):
@@ -63,8 +62,8 @@ def test(net, epoch, name, testloader, vis=True):
     with torch.no_grad():
         for data in testloader:
             inputs, labels = data
-            inputs = inputs.cuda()
-            labels = labels.cuda()
+            inputs = inputs.to(device)
+            labels = labels.to(device)
             outputs = net(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -83,8 +82,8 @@ def train_dp(trainloader, model, optimizer, epoch):
     label_norms = defaultdict(list)
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         inputs, labels = data
-        inputs = inputs.cuda()
-        labels = labels.cuda()
+        inputs = inputs.to(device)
+        labels = labels.to(device)
         optimizer.zero_grad()
 
         outputs = model(inputs)
@@ -98,6 +97,9 @@ def train_dp(trainloader, model, optimizer, epoch):
 
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
+            # if False:
+            #     total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
+            # else:
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             label_norms[int(labels[pos])].append(total_norm)
 
@@ -122,22 +124,14 @@ def train_dp(trainloader, model, optimizer, epoch):
         plot(epoch, np.mean(label_norms[pos]), f'norms/class_{pos}')
 
 
-def clip_grad(parameters, max_norm, norm_type=2):
-    parameters = list(filter(lambda p: p.grad is not None, parameters))
-    total_norm = 0
-    for p in parameters:
-        param_norm = p.grad.data.norm(norm_type)
-        total_norm += param_norm.item() ** norm_type
-
-
 def train(trainloader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
         inputs, labels = data
-        inputs = inputs.cuda()
-        labels = labels.cuda()
+        inputs = inputs.to(device)
+        labels = labels.to(device)
         # zero the parameter gradients
         optimizer.zero_grad()
 
@@ -159,11 +153,17 @@ def train(trainloader, model, optimizer, epoch):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
+    parser.add_argument('--name', dest='name', required=True)
+
+
     args = parser.parse_args()
+    d = datetime.now().strftime('%b.%d_%H.%M.%S')
+    writer = SummaryWriter(log_dir=f'runs/{args.name}')
+    writer.add_custom_scalars(layout)
 
     with open(args.params) as f:
         params = yaml.load(f)
-    helper = ImageHelper(current_time=datetime.now().strftime('%b.%d_%H.%M.%S'), params=params, name='utk')
+    helper = ImageHelper(current_time=d, params=params, name='utk')
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
@@ -200,7 +200,7 @@ if __name__ == '__main__':
     else:
         net = Net()
 
-    net.cuda()
+    net.to(device)
     if dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
     else:
@@ -227,6 +227,7 @@ if __name__ == '__main__':
 
         for class_no, loader in helper.per_class_loader.items():
             class_acc = test(net, epoch, class_no, loader, vis=False)
+            plot(epoch, class_acc, name=f'accuracy_per_class/class_{class_no}')
             acc_list.append(class_acc)
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
