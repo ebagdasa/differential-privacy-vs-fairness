@@ -78,9 +78,9 @@ def test(net, epoch, name, testloader, vis=True):
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
         acc_list = list()
 
-        for i in helper.labels:
+        for i, name in enumerate(helper.labels):
             class_acc = cm[i][i]/cm[i].sum()
-            plot(epoch, class_acc, name=f'accuracy_per_class/class_{i}')
+            plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
             acc_list.append(class_acc)
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
