@@ -226,7 +226,7 @@ class ImageHelper(Helper):
             print('len train: ', len(self.train_dataset))
         self.test_dataset =  torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
         print('len test: ', len(self.test_dataset))
-        self.labels = list(os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/'))
+        self.labels = list(range(len(os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/'))))
         print(self.labels)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'], shuffle=True, num_workers=2, drop_last=True)

@@ -58,6 +58,7 @@ def test(net, epoch, name, testloader, vis=True):
     net.eval()
     correct = 0
     total = 0
+    i=0
     correct_labels = []
     predict_labels = []
     with torch.no_grad():
@@ -71,7 +72,6 @@ def test(net, epoch, name, testloader, vis=True):
             correct_labels.extend([x.item() for x in labels])
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-
     logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
     if vis:
         plot(epoch, 100 * correct / total, name)
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     name = "accuracy"
-    acc = test(net, 0, name, helper.test_loader, vis=True)
+    #acc = test(net, 0, name, helper.test_loader, vis=True)
 
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
