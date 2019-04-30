@@ -30,16 +30,15 @@ import yaml
 
 from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table
+from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
 
 layout = {'accuracy_per_class': {
     'accuracy_per_class': ['Multiline', ['accuracy_per_class/accuracy_var',
                                          'accuracy_per_class/accuracy_min',
                                          'accuracy_per_class/accuracy_max',
                                          'accuracy_per_class/unbalanced']]}}
-
 
 
 def plot(x, y, name):
@@ -82,6 +81,7 @@ def train_dp(trainloader, model, optimizer, epoch):
     label_norms = defaultdict(list)
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         inputs, labels = data
+        print('labels: ', labels)
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -104,13 +104,16 @@ def train_dp(trainloader, model, optimizer, epoch):
             label_norms[int(labels[pos])].append(total_norm)
 
             for tensor_name, tensor in model.named_parameters():
-                new_grad = tensor.grad
-                saved_var[tensor_name].add_(new_grad)
+                  if tensor.grad is not None:
+                     new_grad = tensor.grad
+                #print('new grad: ', new_grad)
+                     saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
         for tensor_name, tensor in model.named_parameters():
-            saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
-            tensor.grad = saved_var[tensor_name] / num_microbatches
+            if tensor.grad is not None:
+                  saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                  tensor.grad = saved_var[tensor_name] / num_microbatches
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
@@ -155,7 +158,6 @@ if __name__ == '__main__':
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
     parser.add_argument('--name', dest='name', required=True)
 
-
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
     writer = SummaryWriter(log_dir=f'runs/{args.name}')
@@ -184,19 +186,40 @@ if __name__ == '__main__':
     logger.info(batch_size)
     logger.info(lr)
     logger.info(momentum)
-    helper.load_cifar_data(dataset=params['dataset'])
+    if helper.params['dataset'] == 'inat':
+    	helper.load_inat_data()
+    else:
+    	helper.load_cifar_data(dataset=params['dataset'])
+    logger.info('before loader')
     helper.create_loaders()
-    helper.sampler_per_class()
-    helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
-                                     number_of_entries=params['number_of_entries'])
-    helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
-                                          number_of_entries_test=params['number_of_entries_test'])
-    helper.compute_rdp()
-    num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
+    logger.info('after loader')
+    #helper.sampler_per_class()
+    #logger.info('after sampler')
+    #helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
+    #                                 number_of_entries=params['number_of_entries'])
+    #logger.info('after sampler expo')
+    #helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
+    #       number_of_entries_test=params['number_of_entries_test'])
+    #helper.compute_rdp()
+    #logger.info('after sampler test')
+    if helper.params['dataset'] == 'cifar10':
+        num_classes = 10
+    elif helper.params['dataset'] == 'cifar100':
+        num_classes = 100
+    elif helper.params['dataset'] == 'inat':
+        num_classes = 14
+    #num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
+
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
         net = models.resnet18(num_classes=num_classes)
+    elif helper.params['model'] == 'inception':
+        net = inception_v3(pretrained=True)
+        net.fc = nn.Linear(2048, num_classes)
+        net.aux_logits = False
+    	#model = torch.nn.DataParallel(model).cuda()
+        net = net.cuda()
     else:
         net = Net()
 
@@ -208,8 +231,7 @@ if __name__ == '__main__':
     optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=[0.5 * epochs,
-                                                                 0.75 * epochs],
-                                                     gamma=0.1)
+                                                                 0.75 * epochs], gamma=0.1)
 
     table = create_table(helper.params)
     writer.add_text('Model Params', table)

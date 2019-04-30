@@ -20,7 +20,6 @@ from collections import OrderedDict
 
 POISONED_PARTICIPANT_POS = 0
 
-
 class ImageHelper(Helper):
 
     def poison(self):
@@ -195,6 +194,32 @@ class ImageHelper(Helper):
                                                         shuffle=True, num_workers=2, drop_last=True)
         return True
 
-    def create_model(self):
 
+    def load_inat_data(self):
+        self.mu_data = [0.485, 0.456, 0.406]
+        self.std_data = [0.229, 0.224, 0.225]
+        self.im_size = [299, 299]
+        self.brightness = 0.4
+        self.contrast = 0.4
+        self.saturation = 0.4
+        self.hue = 0.25
+
+        self.center_crop = transforms.CenterCrop((self.im_size[0], self.im_size[1]))
+        self.scale_aug = transforms.RandomResizedCrop(size=self.im_size[0])
+        self.flip_aug = transforms.RandomHorizontalFlip()
+        self.color_aug = transforms.ColorJitter(self.brightness, self.contrast, self.saturation, self.hue)
+        self.tensor_aug = transforms.ToTensor()
+        self.norm_aug = transforms.Normalize(mean=self.mu_data, std=self.std_data)
+        normalize = transforms.Normalize(mean=self.mu_data, std=self.std_data)
+
+        transform_train = transforms.Compose([self.scale_aug, self.flip_aug, self.color_aug, transforms.ToTensor(), normalize])
+        transform_test = transforms.Compose([self.center_crop, transforms.ToTensor(), normalize])
+
+        self.train_dataset = torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
+        self.test_dataset =  torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
+
+        self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
+        self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'], shuffle=True, num_workers=2, drop_last=True)
+
+    def create_model(self):
         return
