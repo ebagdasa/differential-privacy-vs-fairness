@@ -29,7 +29,7 @@ import yaml
 
 from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table, plot_confusion_matrix
-# from inception import *
+from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -61,7 +61,7 @@ def test(net, epoch, name, testloader, vis=True):
     correct_labels = []
     predict_labels = []
     with torch.no_grad():
-        for data in testloader:
+        for data in tqdm(testloader):
             inputs, labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
@@ -86,8 +86,10 @@ def test(net, epoch, name, testloader, vis=True):
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
         plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
         cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized')
+        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=False)
         torch.save(cm, cm_name)
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag')
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unnormalized')
     return 100 * correct / total
 
 
@@ -235,12 +237,12 @@ if __name__ == '__main__':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
         net = models.resnet18(num_classes=num_classes)
-    # elif helper.params['model'] == 'inception':
-        # net = inception_v3(pretrained=True)
-        # net.fc = nn.Linear(2048, num_classes)
-        # net.aux_logits = False
-    	# model = torch.nn.DataParallel(model).cuda()
-        # net = net.cuda()
+    elif helper.params['model'] == 'inception':
+        net = inception_v3(pretrained=True)
+        net.fc = nn.Linear(2048, num_classes)
+        net.aux_logits = False
+        #model = torch.nn.DataParallel(model).cuda()
+        net = net.cuda()
     else:
         net = Net()
 

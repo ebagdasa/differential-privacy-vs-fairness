@@ -6,7 +6,7 @@ momentum: 0.9
 decay: 5e-4
 S: 1
 z: 0.5
-dp: True
+dp: False
 epochs: 60
 save_on_epochs: [5, 10, 50, 100, 200]
 

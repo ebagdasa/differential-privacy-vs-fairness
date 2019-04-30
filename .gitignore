@@ -2,3 +2,7 @@
 *.iml
 .DS_Store
 .vscode/
+runs/
+saved_models/
+data/
+__pycache__
