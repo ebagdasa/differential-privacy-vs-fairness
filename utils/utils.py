@@ -10,15 +10,6 @@ import itertools
 import matplotlib
 matplotlib.use('AGG')
 
-import sys
-if sys.version_info[0] < 3:
-    import Tkinter as Tk
-else:
-    import tkinter as Tk
-
-root = Tk.Tk()
-root.wm_title("Embedding in TK")
-
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
