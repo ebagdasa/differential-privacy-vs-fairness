@@ -23,13 +23,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm as tqdm
-import visdom
 import time
 import random
 import yaml
 
 from models.resnet import Res, PretrainedRes
-from utils.utils import dict_html, create_table
+from utils.utils import dict_html, create_table, plot_confusion_matrix
 from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -54,10 +53,13 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
+
 def test(net, epoch, name, testloader, vis=True):
     net.eval()
     correct = 0
     total = 0
+    correct_labels = []
+    predict_labels = []
     with torch.no_grad():
         for data in testloader:
             inputs, labels = data
@@ -65,12 +67,27 @@ def test(net, epoch, name, testloader, vis=True):
             labels = labels.to(device)
             outputs = net(inputs)
             _, predicted = torch.max(outputs.data, 1)
+            predict_labels.extend([x.item() for x in predicted])
+            correct_labels.extend([x.item() for x in labels])
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
     logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
     if vis:
         plot(epoch, 100 * correct / total, name)
+        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels)
+        acc_list = list()
+
+        for i in helper.labels:
+            class_acc = cm[i][i]/cm[i].sum()
+            plot(epoch, class_acc, name=f'accuracy_per_class/class_{i}')
+            acc_list.append(class_acc)
+        plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
+        plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
+        plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
+        cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
+        torch.save(cm, cm_name)
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag')
     return 100 * correct / total
 
 
@@ -81,7 +98,7 @@ def train_dp(trainloader, model, optimizer, epoch):
     label_norms = defaultdict(list)
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         inputs, labels = data
-        print('labels: ', labels)
+        # print('labels: ', labels)
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -112,8 +129,11 @@ def train_dp(trainloader, model, optimizer, epoch):
 
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
-                  saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
-                  tensor.grad = saved_var[tensor_name] / num_microbatches
+                if device.type == 'cuda':
+                    saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                else:
+                    saved_var[tensor_name].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                tensor.grad = saved_var[tensor_name] / num_microbatches
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
@@ -187,21 +207,22 @@ if __name__ == '__main__':
     logger.info(lr)
     logger.info(momentum)
     if helper.params['dataset'] == 'inat':
-    	helper.load_inat_data()
+        helper.load_inat_data()
     else:
-    	helper.load_cifar_data(dataset=params['dataset'])
-    logger.info('before loader')
-    helper.create_loaders()
-    logger.info('after loader')
-    #helper.sampler_per_class()
-    #logger.info('after sampler')
-    #helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
-    #                                 number_of_entries=params['number_of_entries'])
-    #logger.info('after sampler expo')
-    #helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
-    #       number_of_entries_test=params['number_of_entries_test'])
-    #helper.compute_rdp()
-    #logger.info('after sampler test')
+        helper.load_cifar_data(dataset=params['dataset'])
+        logger.info('before loader')
+        helper.create_loaders()
+        logger.info('after loader')
+        helper.sampler_per_class()
+        logger.info('after sampler')
+        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
+                                        number_of_entries=params['number_of_entries'])
+        logger.info('after sampler expo')
+        helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
+              number_of_entries_test=params['number_of_entries_test'])
+        helper.compute_rdp()
+        logger.info('after sampler test')
+
     if helper.params['dataset'] == 'cifar10':
         num_classes = 10
     elif helper.params['dataset'] == 'cifar100':
@@ -236,6 +257,7 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     name = "accuracy"
+    acc = test(net, 0, name, helper.test_loader, vis=True)
 
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
@@ -245,18 +267,6 @@ if __name__ == '__main__':
         if helper.params['scheduler']:
             scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True)
-        acc_list = list()
-
-        for class_no, loader in helper.per_class_loader.items():
-            class_acc = test(net, epoch, class_no, loader, vis=False)
-            plot(epoch, class_acc, name=f'accuracy_per_class/class_{class_no}')
-            acc_list.append(class_acc)
-        plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
-        plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
-        plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
-
-        unbalanced_acc = test(net, epoch, 'unbalanced', helper.test_loader_unbalanced, vis=False)
-        plot(epoch, unbalanced_acc, name='accuracy_per_class/unbalanced')
 
         helper.save_model(net, epoch, acc)
     logger.info(f"Finished training for model: {helper.current_time}")

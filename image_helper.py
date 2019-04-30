@@ -150,6 +150,7 @@ class ImageHelper(Helper):
                 transforms.Normalize((0.1307,), (0.3081,))
             ]))
         self.dataset_size = len(self.train_dataset)
+        self.labels = list(range(10))
         return
 
     def create_loaders(self):
@@ -216,7 +217,20 @@ class ImageHelper(Helper):
         transform_test = transforms.Compose([self.center_crop, transforms.ToTensor(), normalize])
 
         self.train_dataset = torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
+        if self.params['ds_size']:
+            indices = list(range(0, len(self.train_dataset)))
+            random.shuffle(indices)
+            random_split = indices[:self.params['ds_size']]
+            self.train_dataset = torch.utils.data.Subset(self.train_dataset, random_split)
         self.test_dataset =  torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
+
+        self.per_class_loader_ds = dict()
+        self.per_class_loader = dict()
+        names = os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test')
+        for name in names:
+            self.per_class_loader_ds[name] = torchvision.datasets.ImageFolder(
+                f'/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/{name}', transform=transform_test)
+            self.per_class_loader[name] = torch.utils.data.DataLoader(self.per_class_loader_ds[name], batch_size=8, shuffle=True, num_workers=2)
 
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'], shuffle=True, num_workers=2, drop_last=True)

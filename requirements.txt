@@ -2,3 +2,6 @@ tqdm
 torch
 torchvision
 pyyaml
+tensorboardX
+sklearn
+matplotlib
