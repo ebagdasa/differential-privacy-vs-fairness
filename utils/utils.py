@@ -8,13 +8,7 @@ import matplotlib.pyplot as plt
 import re
 import itertools
 import matplotlib
-matplotlib.use('TkAgg')
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# implement the default mpl key bindings
-from matplotlib.backend_bases import key_press_handler
-
-
-from matplotlib.figure import Figure
+matplotlib.use('AGG')
 
 import sys
 if sys.version_info[0] < 3:
@@ -183,13 +177,7 @@ def plot_confusion_matrix(correct_labels, predict_labels,
         cm = cm.astype('float')*100 / cm.sum(axis=1)[:, np.newaxis]
         cm = np.nan_to_num(cm, copy=True)
 
-    if sys.version_info[0] < 3:
-        import Tkinter as Tk
-    else:
-        import tkinter as Tk
 
-    root = Tk.Tk()
-    root.wm_title("Embedding in TK")
 
 
     np.set_printoptions(precision=2)
@@ -220,6 +208,5 @@ def plot_confusion_matrix(correct_labels, predict_labels,
         ax.text(j, i, f"{cm[i, j]:.2f}" if cm[i,j]!=0 else '.', horizontalalignment="center", fontsize=10,
                 verticalalignment='center', color= "black")
     fig.set_tight_layout(True)
-    canvas = FigureCanvasTkAgg(fig, master=root)
 
     return fig, cm

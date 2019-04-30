@@ -14,7 +14,7 @@ mu: 1.0
 ds_size: 60000
 
 key_to_drop: 8
-number_of_entries: 1000
+number_of_entries: 500
 number_of_entries_test: 1000
 
 
