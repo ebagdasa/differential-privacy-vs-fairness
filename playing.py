@@ -29,7 +29,7 @@ import yaml
 
 from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table, plot_confusion_matrix
-from inception import *
+# from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -75,7 +75,7 @@ def test(net, epoch, name, testloader, vis=True):
     logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
     if vis:
         plot(epoch, 100 * correct / total, name)
-        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels)
+        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
         acc_list = list()
 
         for i in helper.labels:
@@ -235,12 +235,12 @@ if __name__ == '__main__':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
         net = models.resnet18(num_classes=num_classes)
-    elif helper.params['model'] == 'inception':
-        net = inception_v3(pretrained=True)
-        net.fc = nn.Linear(2048, num_classes)
-        net.aux_logits = False
-    	#model = torch.nn.DataParallel(model).cuda()
-        net = net.cuda()
+    # elif helper.params['model'] == 'inception':
+        # net = inception_v3(pretrained=True)
+        # net.fc = nn.Linear(2048, num_classes)
+        # net.aux_logits = False
+    	# model = torch.nn.DataParallel(model).cuda()
+        # net = net.cuda()
     else:
         net = Net()
 

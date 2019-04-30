@@ -180,9 +180,8 @@ def plot_confusion_matrix(correct_labels, predict_labels,
     '''
     cm = confusion_matrix(correct_labels, predict_labels)
     if normalize:
-        cm = cm.astype('float')*10 / cm.sum(axis=1)[:, np.newaxis]
+        cm = cm.astype('float')*100 / cm.sum(axis=1)[:, np.newaxis]
         cm = np.nan_to_num(cm, copy=True)
-        cm = cm.astype('int')
 
     if sys.version_info[0] < 3:
         import Tkinter as Tk
@@ -196,7 +195,7 @@ def plot_confusion_matrix(correct_labels, predict_labels,
     np.set_printoptions(precision=2)
     ###fig, ax = matplotlib.figure.Figure()
 
-    fig = plt.Figure(figsize=(7, 7), dpi=120, facecolor='w', edgecolor='k')
+    fig = plt.Figure(figsize=(5, 5), dpi=200, facecolor='w', edgecolor='k')
     ax = fig.add_subplot(1, 1, 1)
     im = ax.imshow(cm, cmap='Oranges')
 
@@ -218,7 +217,7 @@ def plot_confusion_matrix(correct_labels, predict_labels,
     ax.yaxis.tick_left()
 
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        ax.text(j, i, format(cm[i, j], 'd') if cm[i,j]!=0 else '.', horizontalalignment="center", fontsize=10,
+        ax.text(j, i, f"{cm[i, j]:.2f}" if cm[i,j]!=0 else '.', horizontalalignment="center", fontsize=10,
                 verticalalignment='center', color= "black")
     fig.set_tight_layout(True)
     canvas = FigureCanvasTkAgg(fig, master=root)
