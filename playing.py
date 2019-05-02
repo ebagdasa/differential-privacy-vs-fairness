@@ -210,6 +210,8 @@ if __name__ == '__main__':
     logger.info(momentum)
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
+    elif helper.params['dataset'] == 'dif':
+        helper.load_dif_data()
     else:
         helper.load_cifar_data(dataset=params['dataset'])
         logger.info('before loader')
@@ -231,7 +233,10 @@ if __name__ == '__main__':
         num_classes = 100
     elif helper.params['dataset'] == 'inat':
         num_classes = 14
-    #num_classes = 10 if helper.params['dataset'] == 'cifar10' else 100
+    elif helper.params['dataset'] == 'dif':
+        num_classes = 2
+    else:
+        raise Exception('wrong dataset')
 
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])

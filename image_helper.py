@@ -14,11 +14,12 @@ import random
 
 from torchvision import datasets, transforms
 import numpy as np
-
+from utils.dif_dataset import DiFDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 
 POISONED_PARTICIPANT_POS = 0
+
 
 class ImageHelper(Helper):
 
@@ -195,7 +196,6 @@ class ImageHelper(Helper):
                                                         shuffle=True, num_workers=2, drop_last=True)
         return True
 
-
     def load_inat_data(self):
         self.mu_data = [0.485, 0.456, 0.406]
         self.std_data = [0.229, 0.224, 0.225]
@@ -213,10 +213,12 @@ class ImageHelper(Helper):
         self.norm_aug = transforms.Normalize(mean=self.mu_data, std=self.std_data)
         normalize = transforms.Normalize(mean=self.mu_data, std=self.std_data)
 
-        transform_train = transforms.Compose([self.scale_aug, self.flip_aug, self.color_aug, transforms.ToTensor(), normalize])
+        transform_train = transforms.Compose(
+            [self.scale_aug, self.flip_aug, self.color_aug, transforms.ToTensor(), normalize])
         transform_test = transforms.Compose([self.center_crop, transforms.ToTensor(), normalize])
 
-        self.train_dataset = torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
+        self.train_dataset = torchvision.datasets.ImageFolder(
+            '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
         print('len train before : ', len(self.train_dataset))
         if self.params['ds_size']:
             indices = list(range(0, len(self.train_dataset)))
@@ -224,12 +226,66 @@ class ImageHelper(Helper):
             random_split = indices[:self.params['ds_size']]
             self.train_dataset = torch.utils.data.Subset(self.train_dataset, random_split)
             print('len train: ', len(self.train_dataset))
-        self.test_dataset =  torchvision.datasets.ImageFolder('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
+        self.test_dataset = torchvision.datasets.ImageFolder(
+            '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
         print('len test: ', len(self.test_dataset))
         self.labels = list(range(len(os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/'))))
         print(self.labels)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
-        self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'], shuffle=True, num_workers=2, drop_last=True)
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],
+                                                        shuffle=True, num_workers=2, drop_last=True)
+
+    def load_dif_data(self):
+
+        mu_data = [0.485, 0.456, 0.406]
+        std_data = [0.229, 0.224, 0.225]
+        im_size = [80, 80]
+        crop_size = [64, 64]
+        brightness = 0.4
+        contrast = 0.4
+        saturation = 0.4
+        hue = 0.25
+
+        resize = transforms.Resize(im_size)
+        rotate = transforms.RandomRotation(degrees=30)
+        crop = transforms.RandomCrop(crop_size)
+        flip_aug = transforms.RandomHorizontalFlip()
+
+        normalize = transforms.Normalize(mean=mu_data, std=std_data)
+
+        center_crop = transforms.CenterCrop(crop_size)
+        transform_train = transforms.Compose([resize, rotate, crop,
+                                              flip_aug, transforms.ToTensor(),
+                                              normalize])
+
+        transform_test = transforms.Compose([resize, center_crop, transforms.ToTensor(), normalize])
+
+        self.train_dataset = DiFDataset(class_list=self.params['class_list'],
+                                        root_dir=self.params['root_dir'],
+                                        crop_list=self.params['crop_list'],
+                                        transform=transform_train)
+
+        self.test_dataset = DiFDataset(class_list=self.params['class_list'],
+                                       root_dir=self.params['root_dir'],
+                                       crop_list=self.params['crop_list'],
+                                       transform=transform_test)
+
+        indices_train = torch.load(self.params['indices_train'])
+        indices_test = torch.load(self.params['indices_test'])
+        train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices_train[0] + indices_train[1])
+        test_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices_test[0] + indices_test[1])
+
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
+                                                        batch_size=self.params['batch_size'],
+                                                        sampler=train_sampler,
+                                                        num_workers=2, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
+                                                       batch_size=self.params['test_batch_size'],
+                                                       sampler=test_sampler,
+                                                       num_workers=2)
+        self.labels = [0,1]
+
 
     def create_model(self):
         return
