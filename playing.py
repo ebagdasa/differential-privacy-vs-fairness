@@ -210,6 +210,7 @@ if __name__ == '__main__':
     logger.info(momentum)
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
+        helper.balance_loaders()
     elif helper.params['dataset'] == 'dif':
         helper.load_dif_data()
     else:

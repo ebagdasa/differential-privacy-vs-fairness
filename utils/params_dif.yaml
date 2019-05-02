@@ -1,12 +1,12 @@
 test_batch_size: 100
 batch_size: 256
-num_microbatches: 256
+num_microbatches: 16
 lr: 0.05
 momentum: 0.5
 decay: 0
-S: 1
-z: 1.1
-dp: False
+S: 10
+z: 0.05
+dp: True
 epochs: 40
 save_on_epochs: [10, 50, 100, 200]
 
@@ -18,7 +18,7 @@ number_of_entries: 1000
 number_of_entries_test: 1000
 
 
-save_model: False
+save_model: True
 dataset: dif
 model: resnet
 densenet_depth: 100

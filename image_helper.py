@@ -235,6 +235,22 @@ class ImageHelper(Helper):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
 
+    def balance_loaders(self, per_class_no=20000):
+        per_class_index = dict()
+        for i in range(len(self.train_dataset)):
+            _, label = self.train_dataset.samples[i]
+            per_class_index[i] = label
+        total_indices = list()
+        for key, value in per_class_index:
+            print(f'class: {key}, len: {value}')
+            random.shuffle(value)
+            total_indices.extend(value[:per_class_no])
+        train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=total_indices)
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
+                                                        batch_size=self.params['batch_size'],
+                                                        sampler=train_sampler,
+                                                        num_workers=2, drop_last=True)
+
     def load_dif_data(self):
 
         mu_data = [0.485, 0.456, 0.406]
