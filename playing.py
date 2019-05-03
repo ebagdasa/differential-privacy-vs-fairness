@@ -213,6 +213,7 @@ if __name__ == '__main__':
         helper.balance_loaders()
     elif helper.params['dataset'] == 'dif':
         helper.load_dif_data()
+        helper.get_unbalanced_faces()
     else:
         helper.load_cifar_data(dataset=params['dataset'])
         logger.info('before loader')
@@ -257,7 +258,15 @@ if __name__ == '__main__':
         criterion = nn.CrossEntropyLoss(reduction='none')
     else:
         criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+
+    if helper.params['optimizer'] == 'SGD':
+        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    elif helper.params['optimizer'] == 'Adam':
+        optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=decay)
+    else:
+        raise Exception('Specify `optimizer` in params.yaml.')
+
+
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=[0.5 * epochs,
                                                                  0.75 * epochs], gamma=0.1)
@@ -266,7 +275,6 @@ if __name__ == '__main__':
     writer.add_text('Model Params', table)
     name = "accuracy"
     #acc = test(net, 0, name, helper.test_loader, vis=True)
-
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
@@ -275,6 +283,11 @@ if __name__ == '__main__':
         if helper.params['scheduler']:
             scheduler.step()
         acc = test(net, epoch, name, helper.test_loader, vis=True)
+        if helper.params['dataset'] == 'dif':
+            for name, value in helper.unbalanced_loaders.items():
+                unb_acc = test(net, epoch, name, value, vis=False)
+                plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
+
 
         helper.save_model(net, epoch, acc)
     logger.info(f"Finished training for model: {helper.current_time}")

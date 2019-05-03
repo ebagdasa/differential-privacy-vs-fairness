@@ -235,22 +235,46 @@ class ImageHelper(Helper):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
 
-    def balance_loaders(self, per_class_no=20000):
+    def balance_loaders(self):
         per_class_index = defaultdict(list)
         for i in range(len(self.train_dataset)):
             _, label = self.train_dataset.samples[i]
             per_class_index[label].append(i)
         total_indices = list()
-        for key, value in per_class_index.items():
-            print(f'class: {key}, len: {len(value)}')
-            random.shuffle(value)
-            total_indices.extend(value[:per_class_no])
+        if self.params['inat_drop_proportional']:
+            for key, value in per_class_index.items():
+                random.shuffle(value)
+                per_class_no = int(len(value) * (self.params['ds_size'] / len(self.train_dataset)))
+                print(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
+                total_indices.extend(value[:per_class_no])
+        else:
+            per_class_no = self.params['ds_size'] / len(per_class_index)
+            for key, value in per_class_index.items():
+                print(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
+                random.shuffle(value)
+                total_indices.extend(value[:per_class_no])
         print(f'total length: {len(total_indices)}')
         train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=total_indices)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
                                                         sampler=train_sampler,
                                                         num_workers=2, drop_last=True)
+
+    def get_unbalanced_faces(self):
+        self.unbalanced_loaders = dict()
+        files = os.listdir(self.params['folder_per_class'])
+        for x in files:
+            indices = torch.load(f"{self.params['folder_per_class']}/{x}")
+            sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices)
+            self.unbalanced_loaders[x] = torch.utils.data.DataLoader(self.test_dataset,
+                                                        batch_size=self.params['test_batch_size'],
+                                                        sampler=sampler,
+                                                        num_workers=2, drop_last=True)
+
+
+
+        return True
+
 
     def load_dif_data(self):
 
@@ -306,3 +330,4 @@ class ImageHelper(Helper):
 
     def create_model(self):
         return
+
