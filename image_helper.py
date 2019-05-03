@@ -241,7 +241,7 @@ class ImageHelper(Helper):
             _, label = self.train_dataset.samples[i]
             per_class_index[i] = label
         total_indices = list()
-        for key, value in per_class_index:
+        for key, value in per_class_index.items():
             print(f'class: {key}, len: {value}')
             random.shuffle(value)
             total_indices.extend(value[:per_class_no])
