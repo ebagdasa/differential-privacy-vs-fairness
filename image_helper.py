@@ -242,7 +242,7 @@ class ImageHelper(Helper):
             per_class_index[label].append(i)
         total_indices = list()
         for key, value in per_class_index.items():
-            print(f'class: {key}, len: {value}')
+            # print(f'class: {key}, len: {value}')
             random.shuffle(value)
             total_indices.extend(value[:per_class_no])
         train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=total_indices)
