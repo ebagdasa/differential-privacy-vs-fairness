@@ -236,10 +236,10 @@ class ImageHelper(Helper):
                                                         shuffle=True, num_workers=2, drop_last=True)
 
     def balance_loaders(self, per_class_no=20000):
-        per_class_index = dict()
+        per_class_index = defaultdict(list)
         for i in range(len(self.train_dataset)):
             _, label = self.train_dataset.samples[i]
-            per_class_index[i] = label
+            per_class_index[i].append(label)
         total_indices = list()
         for key, value in per_class_index.items():
             print(f'class: {key}, len: {value}')
