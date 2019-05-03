@@ -239,7 +239,7 @@ class ImageHelper(Helper):
         per_class_index = defaultdict(list)
         for i in range(len(self.train_dataset)):
             _, label = self.train_dataset.samples[i]
-            per_class_index[i].append(label)
+            per_class_index[label].append(i)
         total_indices = list()
         for key, value in per_class_index.items():
             print(f'class: {key}, len: {value}')
