@@ -1,7 +1,7 @@
 test_batch_size: 100
 batch_size: 256
 num_microbatches: 256
-lr: 0.05
+lr: 0.001
 momentum: 0.5
 decay: 0
 S: 1
@@ -16,7 +16,7 @@ ds_size: 60000
 key_to_drop: 8
 number_of_entries: 1000
 number_of_entries_test: 1000
-
+optimizer: Adam
 
 save_model: False
 dataset: mnist

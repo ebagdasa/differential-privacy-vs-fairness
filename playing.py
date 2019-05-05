@@ -226,9 +226,9 @@ if __name__ == '__main__':
         logger.info('after sampler expo')
         helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
               number_of_entries_test=params['number_of_entries_test'])
-        helper.compute_rdp()
         logger.info('after sampler test')
 
+    helper.compute_rdp()
     if helper.params['dataset'] == 'cifar10':
         num_classes = 10
     elif helper.params['dataset'] == 'cifar100':
@@ -236,14 +236,17 @@ if __name__ == '__main__':
     elif helper.params['dataset'] == 'inat':
         num_classes = 14
     elif helper.params['dataset'] == 'dif':
-        num_classes = 2
+        num_classes = len(helper.labels)
     else:
-        raise Exception('wrong dataset')
+        num_classes = 10
 
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
+        logger.info(f'Model size: {num_classes}')
         net = models.resnet18(num_classes=num_classes)
+    elif helper.params['model'] == 'PretrainedRes':
+        net = PretrainedRes(num_classes)
     elif helper.params['model'] == 'inception':
         net = inception_v3(pretrained=True)
         net.fc = nn.Linear(2048, num_classes)
@@ -273,8 +276,8 @@ if __name__ == '__main__':
 
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
-    name = "accuracy"
-    #acc = test(net, 0, name, helper.test_loader, vis=True)
+    logger.info(helper.labels)
+    acc = test(net, 0, 'test', helper.test_loader, vis=True)
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
@@ -282,7 +285,7 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        acc = test(net, epoch, name, helper.test_loader, vis=True)
+        acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
         if helper.params['dataset'] == 'dif':
             for name, value in helper.unbalanced_loaders.items():
                 unb_acc = test(net, epoch, name, value, vis=False)

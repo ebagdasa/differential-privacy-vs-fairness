@@ -194,6 +194,8 @@ class ImageHelper(Helper):
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
+        self.dataset_size = len(self.train_dataset)
+        print(self.dataset_size)
         return True
 
     def load_inat_data(self):
@@ -234,6 +236,8 @@ class ImageHelper(Helper):
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
+        self.dataset_size = len(self.train_dataset)
+        return True
 
     def balance_loaders(self):
         per_class_index = defaultdict(list)
@@ -313,8 +317,22 @@ class ImageHelper(Helper):
 
         indices_train = torch.load(self.params['indices_train'])
         indices_test = torch.load(self.params['indices_test'])
-        train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices_train[0] + indices_train[1])
-        test_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices_test[0] + indices_test[1])
+        self.labels = list()
+        combined_train = list()
+        combined_test = list()
+        for key, value in indices_train.items():
+            combined_train.extend(value)
+            self.labels.append(key)
+
+        self.labels = sorted(self.labels)
+        t_l = list()
+        for key, value in indices_test.items():
+            combined_test.extend(value)
+            t_l.append(key)
+        logger.info(f"Loaded dataset: labels: {self.labels}, len_train: {len(combined_train)}, len_test: {len(combined_test)} labels: {t_l}")
+
+        train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_train)
+        test_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_test)
 
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
@@ -325,8 +343,29 @@ class ImageHelper(Helper):
                                                        batch_size=self.params['test_batch_size'],
                                                        sampler=test_sampler,
                                                        num_workers=2)
-        self.labels = [0,1]
+        self.dataset_size = len(combined_train)
 
+        return True
+
+
+    def load_jigsaw(self):
+        import pickle
+        import pandas as pd
+
+        max_features = 50000
+
+        train = pd.read_csv('data/jigsaw/processed_train.csv')
+        test = pd.read_csv('data/jigsaw/processed_test.csv')
+        # after processing some of the texts are emply
+        train['comment_text'] = train['comment_text'].fillna('')
+        test['comment_text'] = test['comment_text'].fillna('')
+        with open(f'data/jigsaw/tokenizer_{max_features}.pickle', 'rb') as f:
+            tokenizer = pickle.load(f)
+
+        X_train = tokenizer.texts_to_sequences(train['comment_text'])
+        X_test = tokenizer.texts_to_sequences(test['comment_text'])
+        x_train_lens = [len(i) for i in X_train]
+        x_test_lens = [len(i) for i in X_test]
 
     def create_model(self):
         return
