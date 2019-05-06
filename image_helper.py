@@ -258,6 +258,7 @@ class ImageHelper(Helper):
                 random.shuffle(value)
                 total_indices.extend(value[:per_class_no])
         print(f'total length: {len(total_indices)}')
+        self.dataset_size = len(total_indices)
         train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=total_indices)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
