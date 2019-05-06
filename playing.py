@@ -17,7 +17,7 @@ import torchvision.models as models
 from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
-from models.simple import Net
+from models.simple import Net, FlexiNet
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -63,7 +63,10 @@ def test(net, epoch, name, testloader, vis=True):
     predict_labels = []
     with torch.no_grad():
         for data in tqdm(testloader):
-            inputs, labels = data
+            if helper.params['dataset'] == 'dif':
+                inputs, idxs, labels = data
+            else:
+                inputs, labels = data
             inputs = inputs.to(device)
             labels = labels.to(device)
             outputs = net(inputs)
@@ -99,7 +102,10 @@ def train_dp(trainloader, model, optimizer, epoch):
     running_loss = 0.0
     label_norms = defaultdict(list)
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
-        inputs, labels = data
+        if helper.params['dataset'] == 'dif':
+            inputs, idxs, labels = data
+        else:
+            inputs, labels = data
         # print('labels: ', labels)
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -120,7 +126,10 @@ def train_dp(trainloader, model, optimizer, epoch):
             #     total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
             # else:
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
-            label_norms[int(labels[pos])].append(total_norm)
+            if helper.params['dataset'] == 'dif':
+                label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(total_norm)
+            else:
+                label_norms[int(labels[pos])].append(total_norm)
 
             for tensor_name, tensor in model.named_parameters():
                   if tensor.grad is not None:
@@ -144,9 +153,12 @@ def train_dp(trainloader, model, optimizer, epoch):
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
 
-    for pos in label_norms.keys():
-        print(f"{pos}: {np.mean(label_norms[pos])}")
-        plot(epoch, np.mean(label_norms[pos]), f'norms/class_{pos}')
+    for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
+        print(f"{pos}: {np.mean(norms)}")
+        if helper.params['dataset'] == 'dif':
+            plot(epoch, np.mean(norms), f'dif_norms_class/{pos}')
+        else:
+            plot(epoch, np.mean(norms), f'norms/class_{pos}')
 
 
 def train(trainloader, model, optimizer, epoch):
@@ -154,7 +166,10 @@ def train(trainloader, model, optimizer, epoch):
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
-        inputs, labels = data
+        if helper.params['dataset'] == 'dif':
+            inputs, idxs, labels = data
+        else:
+            inputs, labels = data
         inputs = inputs.to(device)
         labels = labels.to(device)
         # zero the parameter gradients
@@ -247,6 +262,8 @@ if __name__ == '__main__':
         net = models.resnet18(num_classes=num_classes)
     elif helper.params['model'] == 'PretrainedRes':
         net = PretrainedRes(num_classes)
+    elif helper.params['model'] == 'FlexiNet':
+        net = FlexiNet(3, num_classes)
     elif helper.params['model'] == 'inception':
         net = inception_v3(pretrained=True)
         net.fc = nn.Linear(2048, num_classes)
@@ -257,6 +274,7 @@ if __name__ == '__main__':
         net = Net()
 
     net.to(device)
+    logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
     else:
@@ -277,7 +295,7 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(helper.labels)
-    acc = test(net, 0, 'test', helper.test_loader, vis=True)
+
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
@@ -287,9 +305,12 @@ if __name__ == '__main__':
             scheduler.step()
         acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
         if helper.params['dataset'] == 'dif':
-            for name, value in helper.unbalanced_loaders.items():
+            for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
                 unb_acc = test(net, epoch, name, value, vis=False)
-                plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
+                if helper.params['dataset'] == 'dif':
+                    plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
+                else:
+                    plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
 
 
         helper.save_model(net, epoch, acc)

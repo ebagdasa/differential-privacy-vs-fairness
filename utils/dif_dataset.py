@@ -39,5 +39,5 @@ class DiFDataset(Dataset):
             sample = self.transform(sample)
 
 
-        return sample, target
+        return sample, idx, target
 

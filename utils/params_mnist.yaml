@@ -1,21 +1,21 @@
 test_batch_size: 100
-batch_size: 256
+batch_size: 64
 num_microbatches: 256
 lr: 0.001
 momentum: 0.5
 decay: 0
 S: 1
 z: 1.1
-dp: True
-epochs: 60
+dp: False
+epochs: 5
 save_on_epochs: [10, 50, 100, 200]
 
 mu: 1.0
 ds_size: 60000
 
-key_to_drop: 8
-number_of_entries: 1000
-number_of_entries_test: 1000
+key_to_drop: False
+number_of_entries: False
+number_of_entries_test: False
 optimizer: Adam
 
 save_model: False
