@@ -324,7 +324,7 @@ if __name__ == '__main__':
 
             fig = helper.plot_acc_list(unb_acc_dict, epoch)
 
-            torch.save(unb_acc_list, f"{helper.folder_path}/acc_dict_{epoch}.pt")
+            torch.save(unb_acc_dict, f"{helper.folder_path}/acc_dict_{epoch}.pt")
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
 
 

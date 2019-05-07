@@ -268,10 +268,10 @@ class ImageHelper(Helper):
     def get_unbalanced_faces(self):
         self.unbalanced_loaders = dict()
         files = os.listdir(self.params['folder_per_class'])
-        print(files)
+        # print(files)
         for x in sorted(files):
             indices = torch.load(f"{self.params['folder_per_class']}/{x}")
-            print(f'unbalanced: {x}, {len(indices)}')
+            # print(f'unbalanced: {x}, {len(indices)}')
             sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices)
             self.unbalanced_loaders[x] = torch.utils.data.DataLoader(self.test_dataset,
                                                         batch_size=self.params['test_batch_size'],

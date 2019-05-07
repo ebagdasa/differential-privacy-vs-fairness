@@ -1,12 +1,12 @@
 test_batch_size: 100
 batch_size: 256
 num_microbatches: 256
-lr: 0.0001
+lr: 0.0005
 momentum: 0.9
 decay: 5e-4
-S: 2
-z: 0.6
-dp: False
+S: 5
+z: 0.2
+dp: True
 epochs: 30
 save_on_epochs: [10, 20, 40, 60]
 
