@@ -80,11 +80,18 @@ def test(net, epoch, name, testloader, vis=True):
         plot(epoch, 100 * correct / total, name)
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
         acc_list = list()
-
+        acc_dict = dict()
         for i, name in enumerate(helper.labels):
             class_acc = cm[i][i]/cm[i].sum()
+            acc_dict[i] = class_acc
             plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
             acc_list.append(class_acc)
+
+        fig = helper.plot_acc_list(acc_dict, epoch)
+        torch.save(acc_dict, f"{helper.folder_path}/test_acc_dict_{epoch}.pt")
+
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
+
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
         plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
