@@ -296,6 +296,7 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(helper.labels)
+    epoch =0
 
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
@@ -305,13 +306,27 @@ if __name__ == '__main__':
         if helper.params['scheduler']:
             scheduler.step()
         acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
+        unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
                 unb_acc = test(net, epoch, name, value, vis=False)
-                if helper.params['dataset'] == 'dif':
-                    plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
-                else:
-                    plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
+                unb_acc_dict[name] = unb_acc
+                # if helper.params['dataset'] == 'dif':
+                #     plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
+                # else:
+                #     plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
+            unb_acc_list = list(unb_acc_dict.values())
+            logger.info(f'Accuracy on unbalanced set: {sorted(unb_acc_list)}')
+
+            plot(epoch, np.mean(unb_acc_list), f'accuracy_detailed/mean')
+            plot(epoch, np.min(unb_acc_list), f'accuracy_detailed/min')
+            plot(epoch, np.max(unb_acc_list), f'accuracy_detailed/max')
+            plot(epoch, np.var(unb_acc_list), f'accuracy_detailed/var')
+
+            fig = helper.plot_acc_list(unb_acc_dict, epoch)
+
+            torch.save(unb_acc_dict, f"{helper.folder_path}/acc_dict_{epoch}.pt")
+            writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
 
 
         helper.save_model(net, epoch, acc)
