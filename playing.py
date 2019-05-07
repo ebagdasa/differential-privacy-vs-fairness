@@ -249,7 +249,8 @@ if __name__ == '__main__':
     elif helper.params['dataset'] == 'cifar100':
         num_classes = 100
     elif helper.params['dataset'] == 'inat':
-        num_classes = 14
+        num_classes = len(helper.labels)
+        print('num class: ', num_classes)  
     elif helper.params['dataset'] == 'dif':
         num_classes = len(helper.labels)
     else:
