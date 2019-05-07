@@ -79,6 +79,7 @@ def test(net, epoch, name, testloader, vis=True):
     if vis:
         plot(epoch, 100 * correct / total, name)
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
         acc_list = list()
         acc_dict = dict()
         for i, name in enumerate(helper.labels):
@@ -87,16 +88,15 @@ def test(net, epoch, name, testloader, vis=True):
             plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
             acc_list.append(class_acc)
 
-        fig = helper.plot_acc_list(acc_dict, epoch)
+        fig2 = helper.plot_acc_list(acc_dict, epoch)
+        writer.add_figure(figure=fig2, global_step=epoch, tag='tag/normalized')
         torch.save(acc_dict, f"{helper.folder_path}/test_acc_dict_{epoch}.pt")
 
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
 
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
         plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
         plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
         cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized')
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=False)
         torch.save(cm, cm_name)
         writer.add_figure(figure=fig, global_step=epoch, tag='tag/unnormalized')
@@ -305,6 +305,7 @@ if __name__ == '__main__':
     logger.info(helper.labels)
     epoch =0
 
+    acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
