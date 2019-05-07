@@ -374,3 +374,24 @@ class ImageHelper(Helper):
     def create_model(self):
         return
 
+    def plot_acc_list(self, acc_dict, epoch):
+        import matplotlib
+        matplotlib.use('AGG')
+        import matplotlib.pyplot as plt
+
+
+        acc_list = sorted(acc_dict.items(), key=lambda t: t[1])
+        sub_lists = list()
+        names = list()
+        for x, y in acc_list:
+            sub_lists.append(x)
+            names.append(y)
+
+        fig, ax = plt.subplots(1, figsize=(40, 10))
+        ax.plot(sub_lists, names)
+        ax.set_ylim(0, 100)
+        fig.autofmt_xdate()
+        plt.title(f'Accuracy plots. Epoch {epoch}.')
+        plt.savefig(f'{self.folder_path}/figure_{epoch}.pdf', format='pdf')
+
+        return fig

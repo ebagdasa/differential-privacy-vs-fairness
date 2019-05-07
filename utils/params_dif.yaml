@@ -5,9 +5,9 @@ lr: 0.0001
 momentum: 0.9
 decay: 5e-4
 S: 2
-z: 0.1
-dp: True
-epochs: 60
+z: 0.6
+dp: False
+epochs: 30
 save_on_epochs: [10, 20, 40, 60]
 
 mu: 1.0
@@ -20,22 +20,28 @@ number_of_entries_test: 1000
 
 save_model: True
 dataset: dif
-model: FlexiNet
+model: resnet
 densenet_depth: 100
 scheduler: False
 optimizer: Adam
 
-folder_per_class: data/dif/unbalanced/gender_age
-#folder_per_class: data/dif/unbalanced/gender
-
-class_list: /home/eugene/dpf/data/dif/label_age_list.pt
-#class_list: /home/eugene/dpf/data/dif/gender_list.pt
-
 root_dir: /home/eugene/dpf/data/dif/images/
 crop_list: /home/eugene/dpf/data/dif/boxes_list.pt
 
-#indices_train: /home/eugene/dpf/data/dif/gender_train_list.pt
-#indices_test: /home/eugene/dpf/data/dif/gender_test_list.pt
-indices_train: /home/eugene/dpf/data/dif/age_10k_ds_train.pt
-indices_test: /home/eugene/dpf/data/dif/age_10k_ds_test.pt
+#folder_per_class: data/dif/unbalanced/gender_skin
+class_list: /home/eugene/dpf/data/dif/gender_list.pt
+indices_train: /home/eugene/dpf/data/dif/gender_train_list.pt
+indices_test: /home/eugene/dpf/data/dif/gender_test_list.pt
+
+#folder_per_class: data/dif/unbalanced/gender_age
+#class_list: /home/eugene/dpf/data/dif/label_age_list.pt
+#indices_train: /home/eugene/dpf/data/dif/age_10k_ds_train.pt
+#indices_test: /home/eugene/dpf/data/dif/age_10k_ds_test.pt
+
+folder_per_class: data/dif/unbalanced/age_skin_unb/
+#class_list: /home/eugene/dpf/data/dif/label_age_list.pt
+#indices_train: /home/eugene/dpf/data/dif/age_unbalanced_train.pt
+#indices_test: /home/eugene/dpf/data/dif/age_unbalanced_test.pt
+
+
 label_skin_list: data/dif/label_skin_list.pt
