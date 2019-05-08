@@ -1,5 +1,5 @@
 test_batch_size: 100
-batch_size: 64
+batch_size: 256
 num_microbatches: 256
 lr: 0.001
 momentum: 0.5
@@ -13,9 +13,9 @@ save_on_epochs: [10, 50, 100, 200]
 mu: 1.0
 ds_size: 60000
 
-key_to_drop: False
-number_of_entries: False
-number_of_entries_test: False
+key_to_drop: 8
+number_of_entries: 500
+number_of_entries_test: 1000
 optimizer: Adam
 
 save_model: False
@@ -23,3 +23,6 @@ dataset: mnist
 model: net
 densenet_depth: 100
 scheduler: False
+
+
+count_norm_cosine_per_batch: False

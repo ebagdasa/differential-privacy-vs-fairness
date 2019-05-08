@@ -33,11 +33,17 @@ from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-layout = {'accuracy_per_class': {
-    'accuracy_per_class': ['Multiline', ['accuracy_per_class/accuracy_var',
-                                         'accuracy_per_class/accuracy_min',
-                                         'accuracy_per_class/accuracy_max',
-                                         'accuracy_per_class/unbalanced']]}}
+layout = {'cosine': {
+    'cosine': ['Multiline', ['cosine/0',
+                                         'cosine/1',
+                                         'cosine/2',
+                                         'cosine/3',
+                                         'cosine/4',
+                                         'cosine/5',
+                                         'cosine/6',
+                                         'cosine/7',
+                                         'cosine/8',
+                                         'cosine/9']]}}
 
 
 def plot(x, y, name):
@@ -79,18 +85,19 @@ def test(net, epoch, name, testloader, vis=True):
     if vis:
         plot(epoch, 100 * correct / total, name)
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
         acc_list = list()
         acc_dict = dict()
         for i, name in enumerate(helper.labels):
-            class_acc = cm[i][i]/cm[i].sum()
+            class_acc = cm[i][i]/cm[i].sum() * 100
             acc_dict[i] = class_acc
+            logger.info(f'Class: {i}, accuracy: {class_acc}')
             plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
             acc_list.append(class_acc)
 
-        fig2 = helper.plot_acc_list(acc_dict, epoch)
-        writer.add_figure(figure=fig2, global_step=epoch, tag='tag/normalized')
-        torch.save(acc_dict, f"{helper.folder_path}/test_acc_dict_{epoch}.pt")
+        fig2 = helper.plot_acc_list(acc_dict, epoch, name='per_class')
+        writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
+        torch.save(acc_dict, f"{helper.folder_path}/test_acc_class_{epoch}.pt")
 
 
         plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
@@ -99,7 +106,7 @@ def test(net, epoch, name, testloader, vis=True):
         cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=False)
         torch.save(cm, cm_name)
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unnormalized')
+        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unnormalized_cm')
     return 100 * correct / total
 
 
@@ -126,13 +133,23 @@ def train_dp(trainloader, model, optimizer, epoch):
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
-
+        grad_vecs = dict()
+        count_vecs = defaultdict(int)
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
             # if False:
             #     total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
             # else:
-            total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+            if helper.params.get('count_norm_cosine_per_batch', False):
+                total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+                grad_vec = helper.get_grad_vec(model, device)
+                label = labels[pos].item()
+                count_vecs[label] += 1
+                if grad_vecs.get(label, False) is not False:
+                    grad_vecs[label].add_(grad_vec)
+                else:
+                    grad_vecs[label] = grad_vec
+
             if helper.params['dataset'] == 'dif':
                 label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(total_norm)
             else:
@@ -152,6 +169,18 @@ def train_dp(trainloader, model, optimizer, epoch):
                 else:
                     saved_var[tensor_name].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
+
+        if helper.params.get('count_norm_cosine_per_batch', False):
+            total_grad_vec = helper.get_grad_vec(model, device)
+            print(f'Total grad_vec: {torch.norm(total_grad_vec)}')
+            for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
+                vec = vec/count_vecs[k]
+                cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
+                distance = torch.norm(total_grad_vec-vec)
+                print(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
+                plot(i, cosine, name=f'cosine/{k}')
+                plot(i, distance, name=f'distance/{k}')
+
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
@@ -305,7 +334,7 @@ if __name__ == '__main__':
     logger.info(helper.labels)
     epoch =0
 
-    acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
+    # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(1, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
@@ -331,10 +360,10 @@ if __name__ == '__main__':
             plot(epoch, np.max(unb_acc_list), f'accuracy_detailed/max')
             plot(epoch, np.var(unb_acc_list), f'accuracy_detailed/var')
 
-            fig = helper.plot_acc_list(unb_acc_dict, epoch)
+            fig = helper.plot_acc_list(unb_acc_dict, epoch, name='per_subgroup')
 
-            torch.save(unb_acc_dict, f"{helper.folder_path}/acc_dict_{epoch}.pt")
-            writer.add_figure(figure=fig, global_step=epoch, tag='tag/unbalanced')
+            torch.save(unb_acc_dict, f"{helper.folder_path}/acc_subgroup_{epoch}.pt")
+            writer.add_figure(figure=fig, global_step=epoch, tag='tag/subgroup')
 
 
         helper.save_model(net, epoch, acc)

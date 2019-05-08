@@ -136,3 +136,23 @@ class Helper:
         # total_norm = total_norm ** (1. / norm_type)
         # print(total_norm)
         return total_norm
+
+
+
+    @staticmethod
+    def get_grad_vec(model, device, requires_grad=False):
+        size = 0
+        for name, layer in model.named_parameters():
+            if name == 'decoder.weight':
+                continue
+            size += layer.view(-1).shape[0]
+        sum_var = torch.FloatTensor(size, device=device).fill_(0)
+
+        size = 0
+        for name, layer in model.named_parameters():
+            if name == 'decoder.weight':
+                continue
+            sum_var[size:size + layer.view(-1).shape[0]] = (layer.grad).view(-1)
+            size += layer.view(-1).shape[0]
+
+        return sum_var
