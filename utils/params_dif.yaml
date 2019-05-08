@@ -28,20 +28,23 @@ optimizer: Adam
 root_dir: /home/eugene/dpf/data/dif/images/
 crop_list: /home/eugene/dpf/data/dif/boxes_list.pt
 
+#gender
 #folder_per_class: data/dif/unbalanced/gender_skin
-class_list: /home/eugene/dpf/data/dif/gender_list.pt
-indices_train: /home/eugene/dpf/data/dif/gender_train_list.pt
-indices_test: /home/eugene/dpf/data/dif/gender_test_list.pt
+#class_list: /home/eugene/dpf/data/dif/gender_list.pt
+#indices_train: /home/eugene/dpf/data/dif/gender_train_list.pt
+#indices_test: /home/eugene/dpf/data/dif/gender_test_list.pt
 
+#age balanced
 #folder_per_class: data/dif/unbalanced/gender_age
 #class_list: /home/eugene/dpf/data/dif/label_age_list.pt
 #indices_train: /home/eugene/dpf/data/dif/age_10k_ds_train.pt
 #indices_test: /home/eugene/dpf/data/dif/age_10k_ds_test.pt
 
+# age unbalanced
 folder_per_class: data/dif/unbalanced/age_skin_unb/
-#class_list: /home/eugene/dpf/data/dif/label_age_list.pt
-#indices_train: /home/eugene/dpf/data/dif/age_unbalanced_train.pt
-#indices_test: /home/eugene/dpf/data/dif/age_unbalanced_test.pt
+class_list: /home/eugene/dpf/data/dif/label_age_list.pt
+indices_train: /home/eugene/dpf/data/dif/age_unbalanced_train.pt
+indices_test: /home/eugene/dpf/data/dif/age_unbalanced_test.pt
 
 
 label_skin_list: data/dif/label_skin_list.pt
