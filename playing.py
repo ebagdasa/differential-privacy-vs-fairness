@@ -82,6 +82,7 @@ def test(net, epoch, name, testloader, vis=True):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
+    main_acc = 100 * correct / total
     if vis:
         plot(epoch, 100 * correct / total, name)
         fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
@@ -95,7 +96,7 @@ def test(net, epoch, name, testloader, vis=True):
             plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
             acc_list.append(class_acc)
 
-        fig2 = helper.plot_acc_list(acc_dict, epoch, name='per_class')
+        fig2 = helper.plot_acc_list(acc_dict, epoch, name='per_class', accuracy=main_acc)
         writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
         torch.save(acc_dict, f"{helper.folder_path}/test_acc_class_{epoch}.pt")
 
@@ -301,7 +302,9 @@ if __name__ == '__main__':
         logger.info(f'Model size: {num_classes}')
         net = models.resnet18(num_classes=num_classes)
     elif helper.params['model'] == 'PretrainedRes':
-        net = PretrainedRes(num_classes)
+        net = models.resnet18(pretrained=True)
+        net.fc = nn.Linear(512, num_classes)
+        net = net.cuda()
     elif helper.params['model'] == 'FlexiNet':
         net = FlexiNet(3, num_classes)
     elif helper.params['model'] == 'inception':
@@ -309,7 +312,6 @@ if __name__ == '__main__':
         net.fc = nn.Linear(2048, num_classes)
         net.aux_logits = False
         #model = torch.nn.DataParallel(model).cuda()
-        net = net.cuda()
     else:
         net = Net()
 
@@ -345,7 +347,7 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
+        main_acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
@@ -363,11 +365,11 @@ if __name__ == '__main__':
             plot(epoch, np.max(unb_acc_list), f'accuracy_detailed/max')
             plot(epoch, np.var(unb_acc_list), f'accuracy_detailed/var')
 
-            fig = helper.plot_acc_list(unb_acc_dict, epoch, name='per_subgroup')
+            fig = helper.plot_acc_list(unb_acc_dict, epoch, name='per_subgroup', accuracy=main_acc)
 
             torch.save(unb_acc_dict, f"{helper.folder_path}/acc_subgroup_{epoch}.pt")
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/subgroup')
 
 
-        helper.save_model(net, epoch, acc)
+        helper.save_model(net, epoch, main_acc)
     logger.info(f"Finished training for model: {helper.current_time}")
