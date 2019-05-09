@@ -146,8 +146,10 @@ class Helper:
             if name == 'decoder.weight':
                 continue
             size += layer.view(-1).shape[0]
-        sum_var = torch.FloatTensor(size, device=device).fill_(0)
-
+        if device.type == 'cpu':
+            sum_var = torch.FloatTensor(size).fill_(0)
+        else:
+            sum_var = torch.cuda.FloatTensor(size).fill_(0)
         size = 0
         for name, layer in model.named_parameters():
             if name == 'decoder.weight':

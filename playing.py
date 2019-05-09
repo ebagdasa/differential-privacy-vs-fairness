@@ -140,8 +140,9 @@ def train_dp(trainloader, model, optimizer, epoch):
             # if False:
             #     total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
             # else:
+
             if helper.params.get('count_norm_cosine_per_batch', False):
-                total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+
                 grad_vec = helper.get_grad_vec(model, device)
                 label = labels[pos].item()
                 count_vecs[label] += 1
@@ -150,6 +151,7 @@ def train_dp(trainloader, model, optimizer, epoch):
                 else:
                     grad_vecs[label] = grad_vec
 
+            total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             if helper.params['dataset'] == 'dif':
                 label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(total_norm)
             else:
@@ -172,14 +174,15 @@ def train_dp(trainloader, model, optimizer, epoch):
 
         if helper.params.get('count_norm_cosine_per_batch', False):
             total_grad_vec = helper.get_grad_vec(model, device)
-            print(f'Total grad_vec: {torch.norm(total_grad_vec)}')
+            # print(f'Total grad_vec: {torch.norm(total_grad_vec)}')
             for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
                 vec = vec/count_vecs[k]
                 cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
                 distance = torch.norm(total_grad_vec-vec)
-                print(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
-                plot(i, cosine, name=f'cosine/{k}')
-                plot(i, distance, name=f'distance/{k}')
+                # print(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
+
+                plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
+                plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
 
         optimizer.step()
 
