@@ -77,7 +77,7 @@ class ImageHelper(Helper):
             subset_lengths.append(subset_len)
             logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
             ds_indices.extend(indices[:subset_len])
-        print(sum)
+        logger.info(sum)
         self.dataset_size = sum
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
@@ -195,7 +195,7 @@ class ImageHelper(Helper):
         self.train_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
         self.dataset_size = len(self.train_dataset)
-        print(self.dataset_size)
+        logger.info(self.dataset_size)
         return True
 
     def load_inat_data(self):
@@ -221,18 +221,18 @@ class ImageHelper(Helper):
 
         self.train_dataset = torchvision.datasets.ImageFolder(
             '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
-        print('len train before : ', len(self.train_dataset))
+        logger.info('len train before : ', len(self.train_dataset))
         # if self.params['ds_size']:
         #     indices = list(range(0, len(self.train_dataset)))
         #     random.shuffle(indices)
         #     random_split = indices[:self.params['ds_size']]
         #     self.train_dataset = torch.utils.data.Subset(self.train_dataset, random_split)
-        #     print('len train: ', len(self.train_dataset))
+        #     logger.info('len train: ', len(self.train_dataset))
         self.test_dataset = torchvision.datasets.ImageFolder(
             '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
-        print('len test: ', len(self.test_dataset))
+        logger.info('len test: ', len(self.test_dataset))
         self.labels = list(range(len(os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/'))))
-        print(self.labels)
+        logger.info(self.labels)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],
                                                         shuffle=True, num_workers=2, drop_last=True)
@@ -249,15 +249,15 @@ class ImageHelper(Helper):
             for key, value in per_class_index.items():
                 random.shuffle(value)
                 per_class_no = int(len(value) * (self.params['ds_size'] / len(self.train_dataset)))
-                print(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
+                logger.info(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
                 total_indices.extend(value[:per_class_no])
         else:
             per_class_no = self.params['ds_size'] / len(per_class_index)
             for key, value in per_class_index.items():
-                print(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
+                logger.info(f'class: {key}, len: {len(value)}. new length: {per_class_no}')
                 random.shuffle(value)
                 total_indices.extend(value[:per_class_no])
-        print(f'total length: {len(total_indices)}')
+        logger.info(f'total length: {len(total_indices)}')
         self.dataset_size = len(total_indices)
         train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=total_indices)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
@@ -268,10 +268,10 @@ class ImageHelper(Helper):
     def get_unbalanced_faces(self):
         self.unbalanced_loaders = dict()
         files = os.listdir(self.params['folder_per_class'])
-        # print(files)
+        # logger.info(files)
         for x in sorted(files):
             indices = torch.load(f"{self.params['folder_per_class']}/{x}")
-            # print(f'unbalanced: {x}, {len(indices)}')
+            # logger.info(f'unbalanced: {x}, {len(indices)}')
             sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=indices)
             self.unbalanced_loaders[x] = torch.utils.data.DataLoader(self.test_dataset,
                                                         batch_size=self.params['test_batch_size'],

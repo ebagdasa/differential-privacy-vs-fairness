@@ -121,7 +121,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             inputs, idxs, labels = data
         else:
             inputs, labels = data
-        # print('labels: ', labels)
+        # logger.info('labels: ', labels)
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -161,7 +161,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             for tensor_name, tensor in model.named_parameters():
                   if tensor.grad is not None:
                      new_grad = tensor.grad
-                #print('new grad: ', new_grad)
+                #logger.info('new grad: ', new_grad)
                      saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
@@ -175,12 +175,12 @@ def train_dp(trainloader, model, optimizer, epoch):
 
         if helper.params.get('count_norm_cosine_per_batch', False):
             total_grad_vec = helper.get_grad_vec(model, device)
-            # print(f'Total grad_vec: {torch.norm(total_grad_vec)}')
+            # logger.info(f'Total grad_vec: {torch.norm(total_grad_vec)}')
             for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
                 vec = vec/count_vecs[k]
                 cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
                 distance = torch.norm(total_grad_vec-vec)
-                # print(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
+                # logger.info(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
 
                 plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
                 plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
@@ -194,7 +194,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             running_loss = 0.0
 
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
-        print(f"{pos}: {np.mean(norms)}")
+        logger.info(f"{pos}: {np.mean(norms)}")
         if helper.params['dataset'] == 'dif':
             plot(epoch, np.mean(norms), f'dif_norms_class/{pos}')
         else:
@@ -221,7 +221,7 @@ def train(trainloader, model, optimizer, epoch):
 
         loss.backward()
         optimizer.step()
-        # print statistics
+        # logger.info statistics
         running_loss += loss.item()
         if i > 0 and i % 20 == 0:
             #             logger.info('[%d, %5d] loss: %.3f' %
@@ -290,7 +290,7 @@ if __name__ == '__main__':
         num_classes = 100
     elif helper.params['dataset'] == 'inat':
         num_classes = len(helper.labels)
-        print('num class: ', num_classes)  
+        logger.info('num class: ', num_classes)  
     elif helper.params['dataset'] == 'dif':
         num_classes = len(helper.labels)
     else:

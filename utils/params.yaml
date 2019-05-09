@@ -5,10 +5,10 @@ lr: 0.0001
 momentum: 0.9
 decay: 5e-4
 S: 5
-z: 0.2
+z: 0.5
 dp: True
 epochs: 60
-save_on_epochs: [5, 10, 50, 100, 200]
+save_on_epochs: [5, 10, 50]
 optimizer: Adam
 
 mu: 0.9
@@ -19,7 +19,7 @@ number_of_entries: 500
 number_of_entries_test: 1000
 inat_drop_proportional: True
 
-save_model: False
+save_model: True
 dataset: inat
 model: inception
 densenet_depth: 100
