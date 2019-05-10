@@ -1,7 +1,7 @@
 test_batch_size: 100
 batch_size: 256
 num_microbatches: 256
-lr: 0.0001
+lr: 0.0005
 momentum: 0.9
 decay: 5e-4
 S: 1
@@ -28,7 +28,7 @@ optimizer: Adam
 root_dir: /home/eugene/dpf/data/dif/images/
 crop_list: /home/eugene/dpf/data/dif/boxes_list.pt
 
-#resumed_model: model_utk_May.10_07.57.16/model_last.pt.tar
+resumed_model: model_utk_May.09_11.07.46/model_last.pt.tar
 
 #gender
 #folder_per_class: data/dif/unbalanced/gender_skin
