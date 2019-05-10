@@ -321,7 +321,7 @@ if __name__ == '__main__':
         loaded_params = torch.load(f"saved_models/{helper.params['resumed_model']}")
         net.load_state_dict(loaded_params['state_dict'])
         helper.start_epoch = loaded_params['epoch']
-        helper.params['lr'] = loaded_params.get('lr', helper.params['lr'])
+        # helper.params['lr'] = loaded_params.get('lr', helper.params['lr'])
         logger.info(f"Loaded parameters from saved model: LR is"
                     f" {helper.params['lr']} and current epoch is {helper.start_epoch}")
     else:
