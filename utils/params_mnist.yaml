@@ -4,10 +4,10 @@ num_microbatches: 256
 lr: 0.001
 momentum: 0.5
 decay: 0
-S: 1
+S: 20
 z: 1.1
 dp: True
-epochs: 5
+epochs: 120
 save_on_epochs: [10, 50, 100, 200]
 
 mu: 1.0
@@ -16,7 +16,7 @@ ds_size: 60000
 key_to_drop: 8
 number_of_entries: 500
 number_of_entries_test: 1000
-optimizer: Adam
+optimizer: SGD
 
 save_model: True
 dataset: mnist
