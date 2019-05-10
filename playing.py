@@ -314,8 +314,19 @@ if __name__ == '__main__':
         #model = torch.nn.DataParallel(model).cuda()
     else:
         net = Net()
-
     net.to(device)
+
+    if helper.params.get('resumed_model', False):
+        logger.info('Resuming training...')
+        loaded_params = torch.load(f"saved_models/{helper.params['resumed_model']}")
+        net.load_state_dict(loaded_params['state_dict'])
+        helper.start_epoch = loaded_params['epoch']
+        helper.params['lr'] = loaded_params.get('lr', helper.params['lr'])
+        logger.info(f"Loaded parameters from saved model: LR is"
+                    f" {helper.params['lr']} and current epoch is {helper.start_epoch}")
+    else:
+        helper.start_epoch = 1
+
     logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
@@ -340,7 +351,7 @@ if __name__ == '__main__':
     epoch =0
 
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
-    for epoch in range(1, epochs):  # loop over the dataset multiple times
+    for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
         else:
@@ -372,4 +383,4 @@ if __name__ == '__main__':
 
 
         helper.save_model(net, epoch, main_acc)
-    logger.info(f"Finished training for model: {helper.current_time}")
+    logger.info(f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")

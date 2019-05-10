@@ -28,6 +28,8 @@ optimizer: Adam
 root_dir: /home/eugene/dpf/data/dif/images/
 crop_list: /home/eugene/dpf/data/dif/boxes_list.pt
 
+#resumed_model: model_utk_May.10_07.57.16/model_last.pt.tar
+
 #gender
 #folder_per_class: data/dif/unbalanced/gender_skin
 #class_list: /home/eugene/dpf/data/dif/gender_list.pt
