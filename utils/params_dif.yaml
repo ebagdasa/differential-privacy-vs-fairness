@@ -8,7 +8,7 @@ S: 1
 z: 0.8
 dp: True
 epochs: 60
-save_on_epochs: [10, 20, 40, 60]
+save_on_epochs: [10, 20, 30, 40, 50]
 
 mu: 1.0
 ds_size: 70000
