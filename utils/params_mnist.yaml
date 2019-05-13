@@ -4,10 +4,10 @@ num_microbatches: 256
 lr: 0.001
 momentum: 0.5
 decay: 0
-S: 20
-z: 1.1
+S: 1000
+z: 0.001
 dp: True
-epochs: 120
+epochs: 60
 save_on_epochs: [10, 50, 100, 200]
 
 mu: 1.0
@@ -25,4 +25,4 @@ densenet_depth: 100
 scheduler: False
 
 
-count_norm_cosine_per_batch: True
+count_norm_cosine_per_batch: False
