@@ -17,7 +17,7 @@ import torchvision.models as models
 from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
-from models.simple import Net, FlexiNet
+from models.simple import Net, FlexiNet, reseed
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -263,6 +263,7 @@ if __name__ == '__main__':
     logger.info(batch_size)
     logger.info(lr)
     logger.info(momentum)
+    reseed(5)
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
         helper.balance_loaders()
@@ -296,6 +297,7 @@ if __name__ == '__main__':
     else:
         num_classes = 10
 
+    reseed(5)
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
     elif helper.params['model'] == 'resnet':
