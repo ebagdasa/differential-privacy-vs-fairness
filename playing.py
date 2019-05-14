@@ -320,7 +320,13 @@ if __name__ == '__main__':
         #model = torch.nn.DataParallel(model).cuda()
     else:
         net = Net()
+
+    if helper.params.get('multi_gpu', False):
+        logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
+        net = nn.DataParallel(net)
+
     net.to(device)
+
 
     if helper.params.get('resumed_model', False):
         logger.info('Resuming training...')

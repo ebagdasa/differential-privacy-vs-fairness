@@ -50,3 +50,5 @@ folder_per_class: data/dif/unbalanced/age_skin_unb/
 
 
 label_skin_list: data/dif/label_skin_list.pt
+
+multi_gpu: False
