@@ -37,9 +37,10 @@ def inception_v3(pretrained=False, **kwargs):
 
 class Inception3(nn.Module):
 
-    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False):
+    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False, dif=False):
         super(Inception3, self).__init__()
         self.aux_logits = aux_logits
+        self.dif = dif
         self.transform_input = transform_input
         self.Conv2d_1a_3x3 = BasicConv2d(3, 32, kernel_size=3, stride=2)
         self.Conv2d_2a_3x3 = BasicConv2d(32, 32, kernel_size=3)
@@ -112,12 +113,14 @@ class Inception3(nn.Module):
         # 17 x 17 x 768
         if self.training and self.aux_logits:
             aux = self.AuxLogits(x)
-        # 17 x 17 x 768
-        x = self.Mixed_7a(x)
-        # 8 x 8 x 1280
-        x = self.Mixed_7b(x)
-        # 8 x 8 x 2048
-        x = self.Mixed_7c(x)
+
+        if not self.dif:
+            # 17 x 17 x 768
+            x = self.Mixed_7a(x)
+            # 8 x 8 x 1280
+            x = self.Mixed_7b(x)
+            # 8 x 8 x 2048
+            x = self.Mixed_7c(x)
         # 8 x 8 x 2048
         x = F.adaptive_avg_pool2d(x, 1)
         #x = F.avg_pool2d(x, kernel_size=8)

@@ -309,6 +309,10 @@ if __name__ == '__main__':
         net = net.cuda()
     elif helper.params['model'] == 'FlexiNet':
         net = FlexiNet(3, num_classes)
+    elif helper.params['model'] == 'dif_inception':
+        net = inception_v3(pretrained=True, dif=True)
+        net.fc = nn.Linear(768, num_classes)
+        net.aux_logits = False
     elif helper.params['model'] == 'inception':
         net = inception_v3(pretrained=True)
         net.fc = nn.Linear(2048, num_classes)
