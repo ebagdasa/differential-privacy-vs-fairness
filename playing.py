@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from collections import defaultdict, OrderedDict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
-
+from models.mobilenet import MobileNetV2
 from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
@@ -318,10 +318,14 @@ if __name__ == '__main__':
         net.fc = nn.Linear(2048, num_classes)
         net.aux_logits = False
         #model = torch.nn.DataParallel(model).cuda()
+    elif helper.params['model'] == 'mobilenet':
+        net = MobileNetV2(n_class=num_classes, input_size=64)
+
     else:
         net = Net()
 
     if helper.params.get('multi_gpu', False):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
         net = nn.DataParallel(net)
 
