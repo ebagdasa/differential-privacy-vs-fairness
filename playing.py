@@ -379,6 +379,7 @@ if __name__ == '__main__':
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
                 unb_acc = test(net, epoch, name, value, vis=False)
+                plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
                 unb_acc_dict[name] = unb_acc
                 # if helper.params['dataset'] == 'dif':
                 #     plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
