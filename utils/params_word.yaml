@@ -1,11 +1,11 @@
 test_batch_size: 100
 batch_size: 256
-num_microbatches: 64
-lr: 0.0001
+num_microbatches: 256
+lr: 20
 momentum: 0.9
 decay: 5e-4
 S: 2
-z: 0.5
+z: 0.6
 dp: True
 epochs: 60
 save_on_epochs: [10, 20, 30, 40, 50]
@@ -18,15 +18,28 @@ number_of_entries: 1000
 number_of_entries_test: 1000
 
 
-save_model: True
-dataset: dif
-model: PretrainedRes
+save_model: False
+dataset: word
+model: word
 densenet_depth: 100
 scheduler: False
 optimizer: Adam
 
 root_dir: data/dif/images/
 crop_list: data/dif/boxes_list.pt
+
+corpus: data/aag/corpus.pt
+
+emsize: 200
+nhid: 200
+nlayers: 2
+dropout: 0.2
+tied: true
+bptt: 32
+clip: 0.25
+seed: 1
+
+
 
 #resumed_model: model_utk_May.09_11.07.46/model_last.pt.tar
 
@@ -49,20 +62,13 @@ crop_list: data/dif/boxes_list.pt
 #indices_test: data/dif/age_unbalanced_test.pt
 
 # highly unbalanced gneder
-#folder_per_class: data/dif/unbalanced/type1_type6/
-#class_list: data/dif/gender_list.pt
-#indices_train: data/dif/gender_new_train_old_young_28_2.pt
-#indices_test: data/dif/gender_new_test.pt
-
-
-folder_per_class: data/dif/unbalanced/mixed/
+folder_per_class: data/dif/unbalanced/type1_type6/
 class_list: data/dif/gender_list.pt
-indices_train: data/dif/gender_train_black_500.pt
-indices_test: data/dif/gender_test_16.pt
+indices_train: data/dif/gender_new_train_old.pt
+indices_test: data/dif/gender_new_test.pt
 
 
 
 label_skin_list: data/dif/label_skin_list.pt
-#label_skin_list: data/dif/label_age_list.pt
 
 multi_gpu: False

@@ -1,5 +1,8 @@
 import logging
 
+from models.word_model import RNNModel
+from text_helper import TextHelper
+
 logger = logging.getLogger('logger')
 
 import json
@@ -26,7 +29,7 @@ from tqdm import tqdm as tqdm
 import time
 import random
 import yaml
-
+from utils.text_load import *
 from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table, plot_confusion_matrix
 from inception import *
@@ -242,7 +245,13 @@ if __name__ == '__main__':
 
     with open(args.params) as f:
         params = yaml.load(f)
-    helper = ImageHelper(current_time=d, params=params, name='utk')
+    if params.get('model', False) == 'word':
+        helper = TextHelper(current_time=d, params=params, name='text')
+
+        helper.corpus = torch.load(helper.params['corpus'])
+        logger.info(helper.corpus.train.shape)
+    else:
+        helper = ImageHelper(current_time=d, params=params, name='utk')
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
@@ -267,6 +276,8 @@ if __name__ == '__main__':
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
         helper.balance_loaders()
+    elif helper.params['dataset'] == 'word':
+        helper.load_data()
     elif helper.params['dataset'] == 'dif':
         helper.load_dif_data()
         helper.get_unbalanced_faces()
@@ -320,7 +331,11 @@ if __name__ == '__main__':
         #model = torch.nn.DataParallel(model).cuda()
     elif helper.params['model'] == 'mobilenet':
         net = MobileNetV2(n_class=num_classes, input_size=64)
-
+    elif helper.params['model'] == 'word':
+        net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
+                 ninp=helper.params['emsize'], nhid=helper.params['nhid'],
+                 nlayers=helper.params['nlayers'],
+                 dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
     else:
         net = Net()
 
@@ -365,7 +380,6 @@ if __name__ == '__main__':
     writer.add_text('Model Params', table)
     logger.info(helper.labels)
     epoch =0
-
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
