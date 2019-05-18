@@ -4,14 +4,16 @@ num_microbatches: 256
 lr: 0.05
 momentum: 0.5
 decay: 0
-S: 1
-z: 0.8
+S: 1.0
+z: 1.0
 dp: True
 epochs: 60
 save_on_epochs: [10, 50, 100, 200]
 
 mu: 1.0
 ds_size: 60000
+
+#resumed_model: model_utk_May.16_15.10.07/model_last.pt.tar
 
 key_to_drop: 8
 number_of_entries: 1000

@@ -7,6 +7,7 @@ import random
 import logging
 
 from models.word_model import RNNModel
+from utils.nlp_dataset import NLPDataset
 from utils.text_load import *
 
 logger = logging.getLogger("logger")
@@ -85,6 +86,13 @@ class TextHelper(Helper):
         target = Variable(source[i + 1:i + 1 + seq_len].view(-1))
         return data, target
 
+    def my_collate(self, batch):
+        data = [item[0] for item in batch]
+        data = torch.nn.utils.rnn.pad_sequence(data, padding_value=self.n_tokens)
+        label = [item[1] for item in batch]
+        target = torch.FloatTensor(label)
+        return (data, target)
+
     def load_data(self):
         ### DATA PART
 
@@ -92,40 +100,26 @@ class TextHelper(Helper):
         #### check the consistency of # of batches and size of dataset for poisoning
 
         ### PARSE DATA
-        eval_batch_size = self.params['test_batch_size']
-        batch_size = self.params['batch_size']
-        self.train_data = self.batchify(self.corpus.train, batch_size)
-        self.aa_test_tweets = self.batchify(self.corpus.aa_test_tweets, eval_batch_size)
-        self.wh_test_tweets = self.batchify(self.corpus.wh_test_tweets, eval_batch_size)
-        self.dataset_size = len(self.train_data) * batch_size
+        split = 0.8
+
+
+
+        self.train_dataset = NLPDataset(self.params['train'])
+        self.test_dataset = NLPDataset(self.params['test'])
+
+        self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
+                                                        batch_size=self.params['batch_size'],
+                                                        shuffle=True,
+                                                        collate_fn=self.my_collate,
+                                                        num_workers=2, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
+                                                        batch_size=self.params['test_batch_size'],
+                                                        shuffle=True,
+                                                        collate_fn=self.my_collate,
+                                                        num_workers=2, drop_last=True)
+        self.dataset_size = len(self.train_dataset)
+
         print(self.dataset_size)
 
-
-        self.n_tokens = len(self.corpus.dictionary)
-
-    def create_model(self):
-
-        local_model = RNNModel(name='Local_Model', created_time=self.params['current_time'],
-                               rnn_type='LSTM', ntoken=self.n_tokens,
-                               ninp=self.params['emsize'], nhid=self.params['nhid'],
-                               nlayers=self.params['nlayers'],
-                               dropout=self.params['dropout'], tie_weights=self.params['tied'])
-        local_model.cuda()
-        target_model = RNNModel(name='Target', created_time=self.params['current_time'],
-                                rnn_type='LSTM', ntoken=self.n_tokens,
-                                ninp=self.params['emsize'], nhid=self.params['nhid'],
-                                nlayers=self.params['nlayers'],
-                                dropout=self.params['dropout'], tie_weights=self.params['tied'])
-        target_model.cuda()
-        if self.params['resumed_model']:
-            loaded_params = torch.load(f"saved_models/{self.params['resumed_model']}")
-            target_model.load_state_dict(loaded_params['state_dict'])
-            self.start_epoch = loaded_params['epoch']
-            self.params['lr'] = loaded_params.get('lr', self.params['lr'])
-            logger.info(f"Loaded parameters from saved model: LR is"
-                        f" {self.params['lr']} and current epoch is {self.start_epoch}")
-        else:
-            self.start_epoch = 1
-
-        self.local_model = local_model
-        self.target_model = target_model
+        self.n_tokens = self.params['ntokens']

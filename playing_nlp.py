@@ -62,33 +62,43 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
+def binary_accuracy(preds, y):
+    """
+    Returns accuracy per batch, i.e. if you get 8/10 right, this returns 0.8, NOT 8
+    """
 
-def test(model, epoch, name, data_source, vis=True):
-    model.eval()
-    total_loss = 0.0
-    ntokens = len(helper.corpus.dictionary)
-    hidden = model.init_hidden(helper.params['test_batch_size'])
-    correct = 0.0
-    total_test_words = 0.0
-    dataset_size = len(data_source)
-    with torch.no_grad():
-        for i in range(0, data_source.size(0) - 1, helper.params['bptt']):
-            data, targets = helper.get_batch(data_source, i)
-            output, hidden = model(data, hidden)
-            output_flat = output.view(-1, ntokens)
-            pred = output_flat.data.max(1)[1]
-            correct += pred.eq(targets.data).sum().to(dtype=torch.float).item()
-            total_loss += len(data) * criterion(output_flat, targets).item()
-            hidden = helper.repackage_hidden(hidden)
-            total_test_words += targets.data.shape[0]
-
-    acc = 100.0 * (correct / total_test_words)
-    total_l = total_loss / (dataset_size - 1)
-    logger.info(f'Name: {name}. Epoch {epoch}. acc: {acc}: {correct}/{total_test_words}')
-    if vis:
-        plot(epoch, acc, name)
-
+    #round predictions to the closest integer
+    rounded_preds = torch.round(torch.sigmoid(preds))
+    correct = (rounded_preds == y).float() #convert into float for division
+    acc = correct.sum() / len(correct)
     return acc
+
+def test(net, epoch, name, testloader, vis=True):
+    net.eval()
+    correct = 0
+    total = 0
+    i=0
+    correct_labels = []
+    predict_labels = []
+    with torch.no_grad():
+        for data in tqdm(testloader):
+            inputs, labels = data
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = net(inputs).squeeze(1)
+            acc = binary_accuracy(outputs, labels)
+            correct += acc
+            total += 1
+            # predicted = outputs.data > 0.5
+            # predict_labels.extend([x.item() for x in predicted])
+            # correct_labels.extend([x.item() for x in labels])
+            # total += labels.size(0)
+            # correct += (predicted == labels).sum().item()
+    logger.info(f'Name: {name}. Epoch {epoch}. acc: {100 * correct / total}')
+    main_acc = 100 * correct / total
+    if vis:
+        plot(epoch, 100 * correct / total, name)
+    return 100 * correct / total
 
 
 def train_dp(train_data, model, optimizer, epoch):
@@ -96,23 +106,20 @@ def train_dp(train_data, model, optimizer, epoch):
     running_loss = 0.0
     hidden = model.init_hidden(helper.params['batch_size'])
     logger.info(f'Training: Epoch {epoch}. ds size: {len(train_data)} ')
-    for batch, i in tqdm(enumerate(range(0, train_data.size(0) - 1, helper.params['bptt']))):
+    for i, (inputs, labels) in enumerate(train_loader):
         # get the inputs
-
-        inputs, labels = helper.get_batch(train_data, i)
 
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        hidden = helper.repackage_hidden(hidden)
+        # hidden = helper.repackage_hidden(hidden)
         model.zero_grad()
-        output, hidden = model(inputs, hidden)
+        output = model(inputs)
         loss = criterion(output, labels)
+        loss.backward()
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
         saved_var = dict()
         for key, tensor in model.named_parameters():
-            if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
-                continue
             saved_var[key] = torch.zeros_like(tensor)
 
         for pos, j in enumerate(losses):
@@ -121,9 +128,7 @@ def train_dp(train_data, model, optimizer, epoch):
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
 
             for key, tensor in model.named_parameters():
-                if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
-                    continue
-                if  tensor.grad is not None:
+                if tensor.grad is not None:
                      new_grad = tensor.grad
                      saved_var[key].add_(new_grad)
             model.zero_grad()
@@ -138,16 +143,12 @@ def train_dp(train_data, model, optimizer, epoch):
                     saved_var[key].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[key] / num_microbatches
 
-        loss.backward()
 
-        for key, p in model.named_parameters():
-            if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
-                continue
-            p.data.add_(-lr, p.grad.data)
+        optimizer.step()
 
         # logger.info statistics
-        running_loss += loss.item()
-        if batch > 0 and batch % 200 == 0:
+        running_loss += torch.mean(losses).item()
+        if i > 0 and i % 200 == 0:
             logger.info('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 2000))
             # plot(epoch * len(train_data) + batch, running_loss, 'Train Loss')
@@ -155,37 +156,34 @@ def train_dp(train_data, model, optimizer, epoch):
 
 
 
-def train(train_data, model, optimizer, epoch):
+def train(train_loader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
-    hidden = model.init_hidden(helper.params['batch_size'])
-    logger.info(f'Training: Epoch {epoch}. ds size: {len(train_data)} ')
-    for batch, i in tqdm(enumerate(range(0, train_data.size(0) - 1, helper.params['bptt']))):
+    # hidden = model.init_hidden(helper.params['batch_size'])
+    for i, (inputs, labels) in enumerate(train_loader):
         # get the inputs
-
-        inputs, labels = helper.get_batch(train_data, i)
 
         inputs = inputs.to(device)
         labels = labels.to(device)
 
-        hidden = helper.repackage_hidden(hidden)
+        # hidden = helper.repackage_hidden(hidden)
         model.zero_grad()
-        output, hidden = model(inputs, hidden)
-        loss = criterion(output.view(-1, helper.n_tokens), labels)
+        output = model(inputs).squeeze(1)
+        loss = criterion(output, labels)
         loss.backward()
-
-        torch.nn.utils.clip_grad_norm_(model.parameters(), helper.params['clip'])
-        for key, p in model.named_parameters():
-            if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
-                continue
-            p.data.add_(-lr, p.grad.data)
+        optimizer.step()
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), helper.params['clip'])
+        # for key, p in model.named_parameters():
+        #     if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
+        #         continue
+        #     p.data.add_(-lr, p.grad.data)
 
         # logger.info statistics
         running_loss += loss.item()
-        if batch > 0 and batch % 200 == 0:
+        if i > 0 and i % 200 == 0:
             logger.info('[%d, %5d] loss: %.3f' %
                   (epoch + 1, i + 1, running_loss / 2000))
-            # plot(epoch * len(train_data) + batch, running_loss, 'Train Loss')
+            plot(epoch * len(train_loader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
 
 
@@ -241,7 +239,7 @@ if __name__ == '__main__':
         net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
                  ninp=helper.params['emsize'], nhid=helper.params['nhid'],
                  nlayers=helper.params['nlayers'],
-                 dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
+                 dropout=helper.params['dropout'])
     else:
         raise Exception('aaa')
 
@@ -262,22 +260,22 @@ if __name__ == '__main__':
 
     logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if dp:
-        criterion = nn.CrossEntropyLoss(reduction='none')
+        criterion = nn.BCEWithLogitsLoss(reduction='none')
     else:
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.BCEWithLogitsLoss()
 
-    optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
-
+    optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=decay)
+    criterion.to(device)
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     epoch =0
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
-            train_dp(helper.train_data, net, optimizer, epoch)
+            train_dp(helper.train_loader, net, optimizer, epoch)
         else:
-            train(helper.train_data, net, optimizer, epoch)
-        wh_acc = test(net, epoch, "whaccuracy", helper.wh_test_tweets, vis=True)
-        aa_acc = test(net, epoch, "aaaccuracy", helper.aa_test_tweets, vis=True)
+            train(helper.train_loader, net, optimizer, epoch)
+        wh_acc = test(net, epoch, "whaccuracy", helper.test_loader, vis=True)
+        aa_acc = test(net, epoch, "aaaccuracy", helper.test_loader, vis=True)
 
         unb_acc_dict = dict()
 
