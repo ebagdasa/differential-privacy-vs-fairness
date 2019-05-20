@@ -101,58 +101,63 @@ def test(net, epoch, name, testloader, vis=True):
     return 100 * correct / total
 
 
-def train_dp(train_data, model, optimizer, epoch):
+def train_dp(train_loader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
+    label_norms = defaultdict(list)
     hidden = model.init_hidden(helper.params['batch_size'])
-    logger.info(f'Training: Epoch {epoch}. ds size: {len(train_data)} ')
     for i, (inputs, labels) in enumerate(train_loader):
         # get the inputs
 
         inputs = inputs.to(device)
         labels = labels.to(device)
-
-        # hidden = helper.repackage_hidden(hidden)
         model.zero_grad()
-        output = model(inputs)
+        # hidden = helper.repackage_hidden(hidden)
+        output = model(inputs).squeeze(1)
         loss = criterion(output, labels)
-        loss.backward()
+
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
         saved_var = dict()
         for key, tensor in model.named_parameters():
             saved_var[key] = torch.zeros_like(tensor)
 
         for pos, j in enumerate(losses):
+            # print(j)
             j.backward(retain_graph=True)
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
-
+            # total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
+            # print(total_norm)
+            label_norms[int(labels[pos])].append(total_norm)
             for key, tensor in model.named_parameters():
                 if tensor.grad is not None:
-                     new_grad = tensor.grad
-                     saved_var[key].add_(new_grad)
+                    new_grad = tensor.grad
+                    saved_var[key].add_(new_grad)
+
             model.zero_grad()
 
         for key, tensor in model.named_parameters():
-            if helper.params.get('tied', False) and key == 'decoder.weight' or '__' in key:
-                continue
             if tensor.grad is not None:
                 if device.type == 'cuda':
                     saved_var[key].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 else:
                     saved_var[key].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[key] / num_microbatches
-
+            # print(key, torch.mean(tensor.grad).item())
 
         optimizer.step()
 
         # logger.info statistics
         running_loss += torch.mean(losses).item()
-        if i > 0 and i % 200 == 0:
+        if i > 0 and i % 50 == 0:
             logger.info('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
-            # plot(epoch * len(train_data) + batch, running_loss, 'Train Loss')
+                  (epoch + 1, i + 1, running_loss))
+            # logger.info(np.mean(label_norms[0])/i)
+            # logger.info(np.mean(label_norms[1])/ i)
+            plot(epoch * len(train_loader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
+    for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
+        logger.info(f"{pos}: {np.mean(norms)}")
 
 
 
@@ -182,7 +187,7 @@ def train(train_loader, model, optimizer, epoch):
         running_loss += loss.item()
         if i > 0 and i % 200 == 0:
             logger.info('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
+                  (epoch + 1, i + 1, running_loss))
             plot(epoch * len(train_loader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
 
@@ -269,13 +274,17 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     epoch =0
+    helper.compute_rdp()
+    table = create_table(helper.params)
+    writer.add_text('Model Params', table)
+    logger.info(table)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
         else:
             train(helper.train_loader, net, optimizer, epoch)
-        wh_acc = test(net, epoch, "whaccuracy", helper.test_loader, vis=True)
-        aa_acc = test(net, epoch, "aaaccuracy", helper.test_loader, vis=True)
+        wh_acc = test(net, epoch, "whaccuracy", helper.wh_test_loader, vis=True)
+        aa_acc = test(net, epoch, "aaaccuracy", helper.aa_test_loader, vis=True)
 
         unb_acc_dict = dict()
 

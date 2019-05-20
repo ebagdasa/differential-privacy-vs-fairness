@@ -11,6 +11,7 @@ class RNNModel(nn.Module):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken+1, ninp, padding_idx=ntoken)
+        # self.encoder.requires_grad = False
         if rnn_type in ['LSTM', 'GRU']:
             self.rnn = nn.LSTM(ninp, nhid, nlayers, dropout=dropout, bidirectional=True)
         else:
@@ -30,7 +31,10 @@ class RNNModel(nn.Module):
 
     def init_weights(self):
         initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
+        # self.encoder.weight.data.uniform_(-initrange, initrange)
+        embeddings = torch.load('data/aag/embeddings_10k.pt')
+        self.encoder.from_pretrained(embeddings)
+        print(torch.mean(embeddings).item())
         self.fc.bias.data.fill_(0)
         self.fc.weight.data.uniform_(-initrange, initrange)
 

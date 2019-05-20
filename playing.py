@@ -119,12 +119,17 @@ def train_dp(trainloader, model, optimizer, epoch):
     model.train()
     running_loss = 0.0
     label_norms = defaultdict(list)
+    ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         if helper.params['dataset'] == 'dif':
             inputs, idxs, labels = data
         else:
             inputs, labels = data
         # logger.info('labels: ', labels)
+        # keys_input = labels == helper.params['key_to_drop']
+        # inputs_keys = inputs[keys_input]
+        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(0.5, 0.5)
+        # ssum += torch.sum(inputs_keys).item()
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -134,6 +139,9 @@ def train_dp(trainloader, model, optimizer, epoch):
         running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
+        # print(losses.shape)
+        # print(loss.shape)
+        # raise Exception('aa')
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
@@ -195,7 +203,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             #                   (epoch + 1, i + 1, running_loss / 2000))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
-
+    print(ssum)
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
         logger.info(f"{pos}: {np.mean(norms)}")
         if helper.params['dataset'] == 'dif':
@@ -213,6 +221,11 @@ def train(trainloader, model, optimizer, epoch):
             inputs, idxs, labels = data
         else:
             inputs, labels = data
+
+        # keys_input = labels == helper.params['key_to_drop']
+        # inputs_keys = inputs[keys_input]
+        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(0.0, 0.4)
+
         inputs = inputs.to(device)
         labels = labels.to(device)
         # zero the parameter gradients
@@ -378,6 +391,7 @@ if __name__ == '__main__':
 
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
+    logger.info(table)
     logger.info(helper.labels)
     epoch =0
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)

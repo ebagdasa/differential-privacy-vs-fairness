@@ -105,7 +105,8 @@ class TextHelper(Helper):
 
 
         self.train_dataset = NLPDataset(self.params['train'])
-        self.test_dataset = NLPDataset(self.params['test'])
+        self.aa_test_dataset = NLPDataset(self.params['aa_test'])
+        self.wh_test_dataset = NLPDataset(self.params['wh_test'])
 
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
@@ -113,11 +114,17 @@ class TextHelper(Helper):
                                                         collate_fn=self.my_collate,
                                                         num_workers=2, drop_last=True)
 
-        self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
+        self.aa_test_loader = torch.utils.data.DataLoader(self.aa_test_dataset,
                                                         batch_size=self.params['test_batch_size'],
                                                         shuffle=True,
                                                         collate_fn=self.my_collate,
                                                         num_workers=2, drop_last=True)
+        self.wh_test_loader = torch.utils.data.DataLoader(self.wh_test_dataset,
+                                                          batch_size=self.params['test_batch_size'],
+                                                          shuffle=True,
+                                                          collate_fn=self.my_collate,
+                                                          num_workers=2, drop_last=True)
+
         self.dataset_size = len(self.train_dataset)
 
         print(self.dataset_size)
