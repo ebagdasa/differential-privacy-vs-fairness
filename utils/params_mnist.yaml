@@ -4,8 +4,8 @@ num_microbatches: 256
 lr: 0.05
 momentum: 0.5
 decay: 0
-S: 1000
-z: 0.001
+S: 1
+z: 1.0
 dp: True
 epochs: 60
 save_on_epochs: [10, 50, 100, 200]
@@ -16,7 +16,7 @@ ds_size: 60000
 #resumed_model: model_utk_May.16_15.10.07/model_last.pt.tar
 
 key_to_drop: 8
-number_of_entries: 500
+number_of_entries: 50
 number_of_entries_test: 1000
 optimizer: SGD
 
@@ -27,4 +27,4 @@ densenet_depth: 100
 scheduler: False
 
 
-count_norm_cosine_per_batch: True
+count_norm_cosine_per_batch: False
