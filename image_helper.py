@@ -220,7 +220,7 @@ class ImageHelper(Helper):
         transform_test = transforms.Compose([self.center_crop, transforms.ToTensor(), normalize])
 
         self.train_dataset = torchvision.datasets.ImageFolder(
-            '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes', transform=transform_train)
+            '/media/classes', transform=transform_train)
         logger.info('len train before : ', len(self.train_dataset))
         # if self.params['ds_size']:
         #     indices = list(range(0, len(self.train_dataset)))
@@ -229,9 +229,9 @@ class ImageHelper(Helper):
         #     self.train_dataset = torch.utils.data.Subset(self.train_dataset, random_split)
         #     logger.info('len train: ', len(self.train_dataset))
         self.test_dataset = torchvision.datasets.ImageFolder(
-            '/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test', transform=transform_test)
+            '/media/classes_test', transform=transform_test)
         logger.info('len test: ', len(self.test_dataset))
-        self.labels = list(range(len(os.listdir('/media/omid/f731b0ec-fecd-4175-b0a4-3992954d4a03/classes_test/'))))
+        self.labels = list(range(len(os.listdir('/media/classes_test/'))))
         logger.info(self.labels)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=8, shuffle=True, num_workers=2)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params['batch_size'],

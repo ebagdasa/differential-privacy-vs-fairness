@@ -4,8 +4,8 @@ num_microbatches: 16
 lr: 0.0001
 momentum: 0.9
 decay: 5e-4
-S: 1000
-z: 0.001
+S: 1
+z: 0.8
 dp: True
 epochs: 220
 save_on_epochs: [10, 20, 30, 40, 50]
@@ -41,9 +41,9 @@ seed: 1
 
 ntokens: 9999
 
-train: data/aag/train_1wh_60aa_10k_easy.pt
-aa_test:  data/aag/test_aa_10k_easy.pt
-wh_test:  data/aag/test_wh_10k_easy.pt
+train: data/aag/train_60wh_1aa_10k_easy.pt
+aa_test:  data/aag/test_aa_10k_easy_rand.pt
+wh_test:  data/aag/test_wh_10k_easy_rand.pt
 #resumed_model: model_text_May.18_19.28.49//model_last.pt.tar
 
 #gender

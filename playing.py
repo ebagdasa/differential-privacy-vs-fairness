@@ -8,7 +8,7 @@ logger = logging.getLogger('logger')
 import json
 from datetime import datetime
 import argparse
-
+from scipy import ndimage
 import torch
 import torchvision
 import os
@@ -128,7 +128,13 @@ def train_dp(trainloader, model, optimizer, epoch):
         # logger.info('labels: ', labels)
         # keys_input = labels == helper.params['key_to_drop']
         # inputs_keys = inputs[keys_input]
-        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(0.5, 0.5)
+
+        # inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
+        #                                                                   sigma=helper.params['csigma']))
+
+
+        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(helper.params['cmean'], helper.params[
+        #     'cnoise'])
         # ssum += torch.sum(inputs_keys).item()
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -222,9 +228,16 @@ def train(trainloader, model, optimizer, epoch):
         else:
             inputs, labels = data
 
-        # keys_input = labels == helper.params['key_to_drop']
-        # inputs_keys = inputs[keys_input]
-        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(0.0, 0.4)
+        keys_input = labels == helper.params['key_to_drop']
+        inputs_keys = inputs[keys_input]
+
+        # mask = torch.zeros_like(inputs_keys).uniform_() > helper.params['crand']
+
+        inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
+                                                                          sigma=helper.params['csigma']))
+
+        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(helper.params['cmean'], helper.params[
+        #     'cnoise'])
 
         inputs = inputs.to(device)
         labels = labels.to(device)

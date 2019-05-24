@@ -32,9 +32,9 @@ class RNNModel(nn.Module):
     def init_weights(self):
         initrange = 0.1
         # self.encoder.weight.data.uniform_(-initrange, initrange)
-        embeddings = torch.load('data/aag/embeddings_10k.pt')
-        self.encoder.from_pretrained(embeddings)
-        print(torch.mean(embeddings).item())
+        # embeddings = torch.load('data/aag/embeddings_10k.pt')
+        # self.encoder.from_pretrained(embeddings)
+        # print(torch.mean(embeddings).item())
         self.fc.bias.data.fill_(0)
         self.fc.weight.data.uniform_(-initrange, initrange)
 

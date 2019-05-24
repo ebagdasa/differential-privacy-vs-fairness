@@ -5,7 +5,7 @@ import requests  # http://docs.python-requests.org/en/master/
 from tqdm import tqdm
 import traceback
 
-path = '/home/eugene/dpf/data/dif/'
+path = 'dpf/data/dif/'
 begin_with = 1827
 failed_dict = {}
 
