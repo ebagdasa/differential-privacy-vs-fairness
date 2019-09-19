@@ -1,5 +1,9 @@
 ## Readme
 
+The paper discusses how Differential Privacy (specifically DPSGD from [1]) 
+impacts model performance for underrepresented groups. 
+
+### Usage
 
 Configure environment by running: `pip install -r requirements.txt`
 
