@@ -125,17 +125,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             inputs, idxs, labels = data
         else:
             inputs, labels = data
-        # logger.info('labels: ', labels)
-        # keys_input = labels == helper.params['key_to_drop']
-        # inputs_keys = inputs[keys_input]
-
-        # inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
-        #                                                                   sigma=helper.params['csigma']))
-
-
-        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(helper.params['cmean'], helper.params[
-        #     'cnoise'])
-        # ssum += torch.sum(inputs_keys).item()
+        
         inputs = inputs.to(device)
         labels = labels.to(device)
         optimizer.zero_grad()
@@ -145,9 +135,7 @@ def train_dp(trainloader, model, optimizer, epoch):
         running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
-        # print(losses.shape)
-        # print(loss.shape)
-        # raise Exception('aa')
+        
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
@@ -155,9 +143,6 @@ def train_dp(trainloader, model, optimizer, epoch):
         count_vecs = defaultdict(int)
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
-            # if False:
-            #     total_norm = helper.clip_grad_scale_by_layer_norm(model.parameters(), S)
-            # else:
 
             if helper.params.get('count_norm_cosine_per_batch', False):
 
@@ -231,14 +216,8 @@ def train(trainloader, model, optimizer, epoch):
         keys_input = labels == helper.params['key_to_drop']
         inputs_keys = inputs[keys_input]
 
-        # mask = torch.zeros_like(inputs_keys).uniform_() > helper.params['crand']
-
         inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
                                                                           sigma=helper.params['csigma']))
-
-        # inputs[keys_input] += torch.FloatTensor(inputs_keys.shape).normal_(helper.params['cmean'], helper.params[
-        #     'cnoise'])
-
         inputs = inputs.to(device)
         labels = labels.to(device)
         # zero the parameter gradients
@@ -422,10 +401,7 @@ if __name__ == '__main__':
                 unb_acc = test(net, epoch, name, value, vis=False)
                 plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
                 unb_acc_dict[name] = unb_acc
-                # if helper.params['dataset'] == 'dif':
-                #     plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
-                # else:
-                #     plot(epoch, unb_acc, name=f'accuracy_unbalanced/{name}')
+                
             unb_acc_list = list(unb_acc_dict.values())
             logger.info(f'Accuracy on unbalanced set: {sorted(unb_acc_list)}')
 
