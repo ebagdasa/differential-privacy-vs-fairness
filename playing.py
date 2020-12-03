@@ -144,6 +144,7 @@ def train_dp(trainloader, model, optimizer, epoch):
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
 
+            # Note: by default, count_norm_cosine_per_batch is set to false in our params.
             if helper.params.get('count_norm_cosine_per_batch', False):
 
                 grad_vec = helper.get_grad_vec(model, device)
@@ -266,9 +267,16 @@ if __name__ == '__main__':
     momentum = float(helper.params['momentum'])
     decay = float(helper.params['decay'])
     epochs = int(helper.params['epochs'])
-    S = float(helper.params['S'])
     z = float(helper.params['z'])
-    sigma = z * S
+    # If clipping bound S is not specified, it is set to inf.
+    S = float(helper.params['S'])
+    if helper.params.get('S') is not 'inf':
+        # Case: clipping bound S is specified; use this to compute sigma.
+        sigma = z * S
+    else:
+        # Case: clipping bound S is not specified (no clipping);
+        # sigma must be set explicitly in the params.
+        sigma = helper.params['sigma']
     dp = helper.params['dp']
     mu = helper.params['mu']
     logger.info(f'DP: {dp}')
@@ -287,8 +295,10 @@ if __name__ == '__main__':
         helper.get_unbalanced_faces()
     else:
         if helper.params['binary_mnist_task']:
-            classes_to_keep = [helper.params['majority_key'],
-                               helper.params['minority_key']]
+            # Labels are assigned in order of index in this array; so minority_key has
+            # label 0, majority_key has label 1.
+            classes_to_keep = [helper.params['minority_key'],
+                               helper.params['majority_key']]
         else:
             classes_to_keep = None
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
@@ -373,6 +383,9 @@ if __name__ == '__main__':
     logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
+    elif helper.params.get('criterion') == 'mse':
+        print('[DEBUG] using MSE loss')
+        criterion = nn.MSELoss()
     else:
         criterion = nn.CrossEntropyLoss()
 
@@ -396,6 +409,8 @@ if __name__ == '__main__':
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
+            # TODO(jpgard): need to implement training using noisy SGD. This can probably
+            #  be accomplished by modifying the train_dp function.
             train_dp(helper.train_loader, net, optimizer, epoch)
         else:
             train(helper.train_loader, net, optimizer, epoch)

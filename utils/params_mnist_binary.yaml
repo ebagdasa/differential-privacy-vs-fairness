@@ -4,7 +4,12 @@ num_microbatches: 256
 lr: 0.01
 momentum: 0.5
 decay: 0
-S: 1
+
+# Instead of computing the noise variance sigma = Z * s,
+# since we are not using clipping (Z is undefined/infinite),
+# we can explicitly set sigma.
+S: inf
+sigma: 1
 z: 0.8
 dp: True
 epochs: 60
@@ -25,6 +30,7 @@ key_to_drop: 8
 number_of_entries: 500
 number_of_entries_test: 1000
 optimizer: SGD
+criterion: mse
 
 save_model: False
 dataset: mnist
