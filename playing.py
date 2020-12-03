@@ -286,12 +286,19 @@ if __name__ == '__main__':
         helper.load_dif_data()
         helper.get_unbalanced_faces()
     else:
-        helper.load_cifar_data(dataset=params['dataset'])
+        if helper.params['binary_mnist_task']:
+            classes_to_keep = [helper.params['majority_key'],
+                               helper.params['minority_key']]
+        else:
+            classes_to_keep = None
+        helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
+        # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
+
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
                                         number_of_entries=params['number_of_entries'])
         logger.info('after sampler expo')
@@ -304,6 +311,8 @@ if __name__ == '__main__':
         num_classes = 10
     elif helper.params['dataset'] == 'cifar100':
         num_classes = 100
+    elif helper.params['dataset'] == 'mnist' and classes_to_keep:
+        num_classes = len(classes_to_keep)
     elif helper.params['dataset'] == 'inat':
         num_classes = len(helper.labels)
         logger.info('num class: ', num_classes)  
@@ -311,7 +320,6 @@ if __name__ == '__main__':
         num_classes = len(helper.labels)
     else:
         num_classes = 10
-
     reseed(5)
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])

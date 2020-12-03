@@ -116,7 +116,8 @@ class ImageHelper(Helper):
         self.test_loader_unbalanced = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.params[
             'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
 
-    def load_cifar_data(self, dataset):
+    def load_cifar_data(self, dataset, classes_to_keep=None):
+        """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
         ### data load
@@ -150,8 +151,26 @@ class ImageHelper(Helper):
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))
             ]))
+            if classes_to_keep:
+                # Filter the training data to only contain the specified classes.
+                print("[DEBUG] train data start size: %s" % len(self.train_dataset))
+                train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
+                self.train_dataset.targets = self.train_dataset.targets[train_idx]
+                self.train_dataset.data = self.train_dataset.data[train_idx]
+                print("[DEBUG] train data after filtering size: %s" % len(self.train_dataset))
+                print("[DEBUG] test data start size: %s" % len(self.test_dataset))
+                test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
+                self.test_dataset.targets = self.test_dataset.targets[test_idx]
+                self.test_dataset.data = self.test_dataset.data[test_idx]
+                print("[DEBUG] test data after filtering size: %s" % len(self.test_dataset))
+                print("[DEBUG] unique train labels: {}".format(self.train_dataset.targets.unique()))
+                print("[DEBUG] unique test labels: {}".format(self.test_dataset.targets.unique()))
+
         self.dataset_size = len(self.train_dataset)
-        self.labels = list(range(10))
+        if classes_to_keep:
+            self.labels = classes_to_keep
+        else:
+            self.labels = list(range(10))
         return
 
     def create_loaders(self):
