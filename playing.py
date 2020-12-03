@@ -383,9 +383,9 @@ if __name__ == '__main__':
     logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
     if helper.params.get('criterion') == 'mse':
         print('[DEBUG] using MSE loss')
+        criterion = nn.MSELoss(reduction='none')
     elif dp:
         criterion = nn.CrossEntropyLoss(reduction='none')
-        criterion = nn.MSELoss()
     else:
         criterion = nn.CrossEntropyLoss()
 
