@@ -330,6 +330,7 @@ if __name__ == '__main__':
         num_classes = len(helper.labels)
     else:
         num_classes = 10
+    print('[DEBUG] num_classes is %s' % num_classes)
     reseed(5)
     if helper.params['model'] == 'densenet':
         net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
@@ -359,7 +360,7 @@ if __name__ == '__main__':
                  nlayers=helper.params['nlayers'],
                  dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
     else:
-        net = Net()
+        net = Net(output_dim=num_classes)
 
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
