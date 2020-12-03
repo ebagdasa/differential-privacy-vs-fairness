@@ -360,7 +360,7 @@ if __name__ == '__main__':
                  nlayers=helper.params['nlayers'],
                  dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
     elif helper.params['model'] == 'regressionnet':
-        net = RegressionNet()
+        net = RegressionNet(output_dim=1)
     else:
         net = Net(output_dim=num_classes)
 
