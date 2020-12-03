@@ -409,8 +409,6 @@ if __name__ == '__main__':
     # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
-            # TODO(jpgard): need to implement training using noisy SGD. This can probably
-            #  be accomplished by modifying the train_dp function.
             train_dp(helper.train_loader, net, optimizer, epoch)
         else:
             train(helper.train_loader, net, optimizer, epoch)
