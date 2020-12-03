@@ -20,7 +20,7 @@ from models.mobilenet import MobileNetV2
 from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
-from models.simple import Net, FlexiNet, reseed
+from models.simple import Net, FlexiNet, reseed, RegressionNet
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -359,6 +359,8 @@ if __name__ == '__main__':
                  ninp=helper.params['emsize'], nhid=helper.params['nhid'],
                  nlayers=helper.params['nlayers'],
                  dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
+    elif helper.params['model'] == 'regressionnet':
+        net = RegressionNet()
     else:
         net = Net(output_dim=num_classes)
 
