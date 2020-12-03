@@ -381,10 +381,10 @@ if __name__ == '__main__':
         helper.start_epoch = 1
 
     logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
-    if dp:
-        criterion = nn.CrossEntropyLoss(reduction='none')
-    elif helper.params.get('criterion') == 'mse':
+    if helper.params.get('criterion') == 'mse':
         print('[DEBUG] using MSE loss')
+    elif dp:
+        criterion = nn.CrossEntropyLoss(reduction='none')
         criterion = nn.MSELoss()
     else:
         criterion = nn.CrossEntropyLoss()
