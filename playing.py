@@ -190,17 +190,16 @@ def train_dp(trainloader, model, optimizer, epoch):
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
-            #             logger.info('[%d, %5d] loss: %.3f' %
-            #                   (epoch + 1, i + 1, running_loss / 2000))
+            logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
     print(ssum)
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
-        logger.info(f"{pos}: {np.mean(norms)}")
+        logger.info(f"{pos}: {torch.mean(norms)}")
         if helper.params['dataset'] == 'dif':
-            plot(epoch, np.mean(norms), f'dif_norms_class/{pos}')
+            plot(epoch, torch.mean(norms), f'dif_norms_class/{pos}')
         else:
-            plot(epoch, np.mean(norms), f'norms/class_{pos}')
+            plot(epoch, torch.mean(norms), f'norms/class_{pos}')
 
 
 def train(trainloader, model, optimizer, epoch):
