@@ -1,0 +1,37 @@
+test_batch_size: 100
+batch_size: 256
+num_microbatches: 256
+lr: 0.01
+momentum: 0.5
+decay: 0
+S: 1
+z: 0.8
+dp: True
+epochs: 60
+save_on_epochs: [10, 50, 100, 200]
+
+mu: 1.0
+ds_size: 60000
+
+#resumed_model: model_utk_May.16_15.10.07/model_last.pt.tar
+
+# majority_key will be the "positive" class
+majority_key: 3
+# minority_key will be the "negative" class
+minority_key: 8
+
+key_to_drop: 8
+number_of_entries: 500
+number_of_entries_test: 1000
+optimizer: SGD
+
+save_model: False
+dataset: mnist
+model: net
+densenet_depth: 100
+scheduler: False
+
+
+count_norm_cosine_per_batch: False
+
+csigma: 0.9
