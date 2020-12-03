@@ -34,7 +34,7 @@ criterion: mse
 
 save_model: False
 dataset: mnist
-model: net
+model: regressionnet
 densenet_depth: 100
 scheduler: False
 
