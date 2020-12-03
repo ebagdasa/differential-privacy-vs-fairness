@@ -19,6 +19,7 @@ ds_size: 60000
 majority_key: 3
 # minority_key will be the "negative" class
 minority_key: 8
+binary_mnist_task: True
 
 key_to_drop: 8
 number_of_entries: 500
