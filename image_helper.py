@@ -155,12 +155,12 @@ class ImageHelper(Helper):
                 # Filter the training data to only contain the specified classes.
                 print("[DEBUG] train data start size: %s" % len(self.train_dataset))
                 train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
-                self.train_dataset.targets = self.train_dataset.targets[train_idx]
+                self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
                 print("[DEBUG] train data after filtering size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
                 test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
-                self.test_dataset.targets = self.test_dataset.targets[test_idx]
+                self.test_dataset.targets = self.test_dataset.targets[test_idx].to(dtype=torch.float32)
                 self.test_dataset.data = self.test_dataset.data[test_idx]
                 # Recode the labels, starting at zero
                 for idx, c in enumerate(classes_to_keep):

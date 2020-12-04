@@ -99,6 +99,19 @@ class Net(SimpleNet):
         return F.log_softmax(x, dim=1)
 
 
+class RegressionNet(Net):
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4 * 4 * 50)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return torch.squeeze(x, 1)
+
+
+
 class FlexiNet(SimpleNet):
     def __init__(self, input_channel, output_dim):
         super(FlexiNet, self).__init__()
@@ -118,17 +131,6 @@ class FlexiNet(SimpleNet):
             x = self.fc2(x)
             return F.log_softmax(x, dim=1)
 
-class RegressionNet(Net):
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 13 * 13 * 50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
 
 #
   # input_layer = tf.reshape(features['x'], [-1, 28, 28, 1])

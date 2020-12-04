@@ -127,7 +127,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             inputs, labels = data
         
         inputs = inputs.to(device)
-        labels = labels.to(device)
+        labels = labels.to(device, dtype=torch.float32)
         optimizer.zero_grad()
 
         outputs = model(inputs)
@@ -294,7 +294,7 @@ if __name__ == '__main__':
         helper.load_dif_data()
         helper.get_unbalanced_faces()
     else:
-        if helper.params['binary_mnist_task']:
+        if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
             classes_to_keep = [helper.params['minority_key'],
@@ -363,7 +363,6 @@ if __name__ == '__main__':
         net = RegressionNet(output_dim=1)
     else:
         net = Net(output_dim=num_classes)
-
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
