@@ -71,6 +71,13 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
+def per_class_mse(outputs, labels, target_class):
+    per_class_idx = labels == target_class
+    per_class_outputs = outputs[per_class_idx]
+    per_class_labels = labels[per_class_idx]
+    mse_per_class = torch.nn.MSELoss()(per_class_outputs, per_class_labels)
+    return mse_per_class
+
 
 def test(net, epoch, name, testloader, vis=True, mse=False):
     net.eval()
@@ -98,41 +105,46 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
                 correct_labels.extend([x.item() for x in labels])
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                main_acc = 100 * correct / total
-                logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_acc}')
+                main_test_metric = 100 * correct / total
+                logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_test_metric}')
             else:
-                main_acc = torch.nn.MSELoss()(outputs, labels)
-                check_tensor_finite(main_acc)
-                logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_acc}')
+                main_test_metric = torch.nn.MSELoss()(outputs, labels)
+                check_tensor_finite(main_test_metric)
+                logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
 
 
     if vis:
-        # TODO(jpgard): potentially handle the case of MSE; this only works for classification.
-        plot(epoch, 100 * correct / total, name)
-        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
-        acc_list = list()
-        acc_dict = dict()
-        for i, name in enumerate(helper.labels):
-            class_acc = cm[i][i]/cm[i].sum() * 100
-            acc_dict[i] = class_acc
-            logger.info(f'Class: {i}, accuracy: {class_acc}')
-            plot(epoch, class_acc, name=f'accuracy_per_class/class_{name}')
-            acc_list.append(class_acc)
+        plot(epoch, main_test_metric, name)
+        metric_list = list()
+        metric_dict = dict()
+        if not mse:
+            fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
+            writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
+        for i, class_name in enumerate(helper.labels):
+            if not mse:
+                metric_value = cm[i][i]/cm[i].sum() * 100
+                fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
+                                                labels=helper.labels, normalize=False)
+                cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
+                torch.save(cm, cm_name)
+                writer.add_figure(figure=fig, global_step=epoch,
+                                  tag='tag/unnormalized_cm')
+            else:
+                metric_value = per_class_mse(outputs, labels, i)
+            metric_dict[i] = metric_value
+            logger.info(f'Class: {i}, {class_name}: {metric_value}')
+            plot(epoch, metric_value, name=f'{name}_per_class/class_{class_name}')
+            metric_list.append(metric_value)
 
-        fig2 = helper.plot_acc_list(acc_dict, epoch, name='per_class', accuracy=main_acc)
+        fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class', accuracy=main_test_metric)
         writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
-        torch.save(acc_dict, f"{helper.folder_path}/test_acc_class_{epoch}.pt")
+        torch.save(metric_dict, f"{helper.folder_path}/test_{name}_class_{epoch}.pt")
 
+        plot(epoch, np.var(metric_list), name=f'{name}_per_class/{name}_var')
+        plot(epoch, np.max(metric_list), name=f'{name}_per_class/{name}_max')
+        plot(epoch, np.min(metric_list), name=f'{name}_per_class/{name}_min')
 
-        plot(epoch, np.var(acc_list), name='accuracy_per_class/accuracy_var')
-        plot(epoch, np.max(acc_list), name='accuracy_per_class/accuracy_max')
-        plot(epoch, np.min(acc_list), name='accuracy_per_class/accuracy_min')
-        cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
-        fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=False)
-        torch.save(cm, cm_name)
-        writer.add_figure(figure=fig, global_step=epoch, tag='tag/unnormalized_cm')
-    return main_acc
+    return main_test_metric
 
 
 def train_dp(trainloader, model, optimizer, epoch):
@@ -440,9 +452,7 @@ if __name__ == '__main__':
     logger.info(table)
     logger.info(helper.labels)
     epoch =0
-    # Only do classification results visualization for classification experiments.
-    test_vis = helper.params.get('criterion') != 'mse'
-    # acc = test(net, epoch, "accuracy", helper.test_loader, vis=True)
+    name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch)
@@ -450,8 +460,7 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        test_loss = test(net, epoch, "accuracy", helper.test_loader,
-                         vis=test_vis)
+        test_loss = test(net, epoch, name, helper.test_loader, mse=helper.params.get('criterion') == 'mse')
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
