@@ -221,8 +221,10 @@ def train_dp(trainloader, model, optimizer, epoch):
 
                 plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
                 plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
-
+        import ipdb;ipdb.set_trace()
         optimizer.step()
+        import ipdb;ipdb.set_trace()
+        # for tensor_name, tensor in model.named_parameters(): print("{} {}".format(tensor_name, tensor))
 
         if i > 0 and i % 20 == 0:
             logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
