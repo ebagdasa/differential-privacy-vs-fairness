@@ -71,11 +71,19 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
+def compute_mse(outputs: torch.Tensor, labels: torch.Tensor):
+    assert outputs.shape == labels.shape, \
+        "Expected outputs and labels same shape, got shapes {} and {}".format(
+            outputs.shape, labels.shape
+        )
+    mse = (outputs - labels)**2
+    return torch.mean(mse)
+
 def per_class_mse(outputs, labels, target_class):
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
     per_class_labels = labels[per_class_idx]
-    mse_per_class = torch.nn.MSELoss()(per_class_outputs, per_class_labels)
+    mse_per_class = compute_mse(per_class_outputs, per_class_labels)
     return mse_per_class
 
 
@@ -108,7 +116,7 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
                 main_test_metric = 100 * correct / total
                 logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_test_metric}')
             else:
-                main_test_metric = torch.nn.MSELoss()(outputs, labels)
+                main_test_metric = compute_mse(outputs, labels)
                 check_tensor_finite(main_test_metric)
                 logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
 
