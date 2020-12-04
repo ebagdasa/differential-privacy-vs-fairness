@@ -155,7 +155,7 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
     return main_test_metric
 
 
-def train_dp(trainloader, model, optimizer, epoch):
+def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
     norm_type = 2
     model.train()
     running_loss = 0.0
@@ -251,6 +251,9 @@ def train_dp(trainloader, model, optimizer, epoch):
         if helper.params['dataset'] == 'dif':
             plot(epoch, torch.mean(torch.stack(norms)), f'dif_norms_class/{pos}')
         else:
+            if labels_mapping:
+                # Recode the binary labels to the true label, for the Tensorboard metric
+                pos = labels_mapping[pos]
             plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
@@ -351,6 +354,8 @@ if __name__ == '__main__':
             # label 0, majority_key has label 1.
             classes_to_keep = [helper.params['minority_key'],
                                helper.params['majority_key']]
+            binary_labels_to_true_labels = {
+                i: label for i, label in enumerate(classes_to_keep)}
         else:
             classes_to_keep = None
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
@@ -467,7 +472,8 @@ if __name__ == '__main__':
     name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
-            train_dp(helper.train_loader, net, optimizer, epoch)
+            train_dp(helper.train_loader, net, optimizer, epoch,
+                     labels_mapping=binary_labels_to_true_labels)
         else:
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
