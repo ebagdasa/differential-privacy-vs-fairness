@@ -192,6 +192,7 @@ def train_dp(trainloader, model, optimizer, epoch):
             for tensor_name, tensor in model.named_parameters():
                   if tensor.grad is not None:
                      new_grad = tensor.grad
+                     check_tensor_finite(new_grad)
                 #logger.info('new grad: ', new_grad)
                      saved_var[tensor_name].add_(new_grad)
             try:
