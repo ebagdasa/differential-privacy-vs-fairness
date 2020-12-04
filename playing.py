@@ -209,6 +209,7 @@ def train_dp(trainloader, model, optimizer, epoch):
                 else:
                     saved_var[tensor_name].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
+                check_tensor_finite(tensor.grad)
 
         if helper.params.get('count_norm_cosine_per_batch', False):
             total_grad_vec = helper.get_grad_vec(model, device)
@@ -306,13 +307,14 @@ if __name__ == '__main__':
     z = float(helper.params['z'])
     # If clipping bound S is not specified, it is set to inf.
     S = float(helper.params['S'])
-    if helper.params.get('S') is not 'inf':
+    if helper.params.get('S') != 'inf':
         # Case: clipping bound S is specified; use this to compute sigma.
         sigma = z * S
     else:
         # Case: clipping bound S is not specified (no clipping);
         # sigma must be set explicitly in the params.
         sigma = helper.params['sigma']
+    logger.debug("sigma = %s" % sigma)
     dp = helper.params['dp']
     mu = helper.params['mu']
     logger.info(f'DP: {dp}')
