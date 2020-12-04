@@ -75,7 +75,7 @@ class ImageHelper(Helper):
                 subset_len = int(len(indices) * (mu ** key) * proportion)
             sum += subset_len
             subset_lengths.append(subset_len)
-            logger.info(f'Key: {key}, len: {subset_len} class_len {len(indices)}')
+            logger.info(f'Key: {key}, subset len: {subset_len} original class len: {len(indices)}')
             ds_indices.extend(indices[:subset_len])
         logger.info(sum)
         self.dataset_size = sum
