@@ -351,10 +351,9 @@ if __name__ == '__main__':
         helper.get_unbalanced_faces()
     else:
         if helper.params.get('binary_mnist_task'):
-            majority_key = args.majority_key if args.majority_key else helper.params.get('majority_key')
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
-            classes_to_keep = (helper.params['key_to_drop'], majority_key)
+            classes_to_keep = (helper.params['key_to_drop'], args.majority_key)
             binary_labels_to_true_labels = {
                 i: label for i, label in enumerate(classes_to_keep)}
         else:
