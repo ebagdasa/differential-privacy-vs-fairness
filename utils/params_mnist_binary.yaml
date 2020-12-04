@@ -33,6 +33,7 @@ dataset: mnist
 model: regressionnet
 densenet_depth: 100
 scheduler: False
+multi_gpu: True
 
 
 count_norm_cosine_per_batch: False
