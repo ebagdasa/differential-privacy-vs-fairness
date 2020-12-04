@@ -296,7 +296,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
     parser.add_argument('--name', dest='name', required=True)
-
+    parser.add_argument("--majority_key", default=None,
+                        help="Optionally specify the majority group key (e.g. '1').")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
     writer = SummaryWriter(log_dir=f'runs/{args.name}')
@@ -350,10 +351,10 @@ if __name__ == '__main__':
         helper.get_unbalanced_faces()
     else:
         if helper.params.get('binary_mnist_task'):
+            majority_key = args.majority_key if args.majority_key else helper.params['majority_key']
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
-            classes_to_keep = [helper.params['minority_key'],
-                               helper.params['majority_key']]
+            classes_to_keep = (helper.params['key_to_drop'], majority_key)
             binary_labels_to_true_labels = {
                 i: label for i, label in enumerate(classes_to_keep)}
         else:
