@@ -71,7 +71,7 @@ def compute_norm(model, norm_type=2):
     return total_norm
 
 
-def compute_mse(outputs: torch.Tensor, labels: torch.Tensor):
+def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     assert outputs.shape == labels.shape, \
         "Expected outputs and labels same shape, got shapes {} and {}".format(
             outputs.shape, labels.shape
@@ -79,7 +79,7 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor):
     mse = (outputs - labels)**2
     return torch.mean(mse)
 
-def per_class_mse(outputs, labels, target_class):
+def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
     per_class_labels = labels[per_class_idx]
@@ -138,7 +138,7 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
-                metric_value = per_class_mse(outputs, labels, i)
+                metric_value = per_class_mse(outputs, labels, i).numpy()[0]
             metric_dict[i] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{name}_per_class/class_{class_name}')
