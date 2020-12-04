@@ -307,7 +307,7 @@ if __name__ == '__main__':
         helper.corpus = torch.load(helper.params['corpus'])
         logger.info(helper.corpus.train.shape)
     else:
-        helper = ImageHelper(current_time=d, params=params, name='utk')
+        helper = ImageHelper(current_time=d, params=params, name=args.name)
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
