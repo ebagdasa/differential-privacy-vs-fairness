@@ -162,10 +162,6 @@ class ImageHelper(Helper):
                 test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
                 self.test_dataset.targets = self.test_dataset.targets[test_idx].to(dtype=torch.float32)
                 self.test_dataset.data = self.test_dataset.data[test_idx]
-                # Recode the labels, starting at zero
-                for idx, c in enumerate(classes_to_keep):
-                    self.train_dataset.targets[self.train_dataset.targets == c] = idx
-                    self.test_dataset.targets[self.test_dataset.targets == c] = idx
                 print("[DEBUG] test data after filtering size: %s" % len(self.test_dataset))
                 print("[DEBUG] unique train labels: {}".format(self.train_dataset.targets.unique()))
                 print("[DEBUG] unique test labels: {}".format(self.test_dataset.targets.unique()))
@@ -175,6 +171,15 @@ class ImageHelper(Helper):
             self.labels = classes_to_keep
         else:
             self.labels = list(range(10))
+        return
+
+    def recode_labels_to_binary(self, classes=None):
+        if not classes:
+            classes = self.test_dataset.targets.unique()
+        # Recode the labels, starting at zero
+        for idx, c in enumerate(classes):
+            self.train_dataset.targets[self.train_dataset.targets == c] = idx
+            self.test_dataset.targets[self.test_dataset.targets == c] = idx
         return
 
     def create_loaders(self):

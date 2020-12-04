@@ -367,6 +367,10 @@ if __name__ == '__main__':
         helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
               number_of_entries_test=params['number_of_entries_test'])
         logger.info('after sampler test')
+        # After sampling completes, we recode the data to majority/minority
+        if helper.params.get('binary_mnist_task'):
+            helper.recode_labels_to_binary(classes_to_keep)
+
 
     helper.compute_rdp()
     if helper.params['dataset'] == 'cifar10':
