@@ -196,11 +196,7 @@ def train_dp(trainloader, model, optimizer, epoch):
                      check_tensor_finite(tensor)
                 #logger.info('new grad: ', new_grad)
                      saved_var[tensor_name].add_(new_grad)
-            try:
-                model.zero_grad()
-            except Exception as e:
-                print("Exception when running model.zero_grad(): {}".format(e))
-                import ipdb;ipdb.set_trace()
+            model.zero_grad()
 
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
@@ -222,10 +218,8 @@ def train_dp(trainloader, model, optimizer, epoch):
 
                 plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
                 plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
-        import ipdb;ipdb.set_trace()
+
         optimizer.step()
-        import ipdb;ipdb.set_trace()
-        # for tensor_name, tensor in model.named_parameters(): print("{} {}".format(tensor_name, tensor))
 
         if i > 0 and i % 20 == 0:
             logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
