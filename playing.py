@@ -48,6 +48,15 @@ layout = {'cosine': {
                                          'cosine/8',
                                          'cosine/9']]}}
 
+def check_tensor_finite(x: torch.Tensor):
+    if torch.isnan(x).any():
+        logger.warning("nan values detected in tensor.")
+        import ipdb;ipdb.set_trace()
+    if torch.isinf(x).any():
+        logger.warning("inf values detected in tensor.")
+        import ipdb;ipdb.set_trace()
+    return
+
 
 def plot(x, y, name):
     writer.add_scalar(tag=name, scalar_value=y, global_step=x)
@@ -79,6 +88,10 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
             inputs = inputs.to(device)
             labels = labels.to(device)
             outputs = net(inputs)
+
+            check_tensor_finite(labels)
+            check_tensor_finite(outputs)
+
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
@@ -89,6 +102,7 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
                 logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_acc}')
             else:
                 main_acc = torch.nn.MSELoss()(outputs, labels)
+                check_tensor_finite(main_acc)
                 logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_acc}')
 
 
@@ -138,7 +152,14 @@ def train_dp(trainloader, model, optimizer, epoch):
         optimizer.zero_grad()
 
         outputs = model(inputs)
+
+        check_tensor_finite(outputs)
+        check_tensor_finite(labels)
+
         loss = criterion(outputs, labels)
+
+        check_tensor_finite(loss)
+
         running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
