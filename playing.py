@@ -138,7 +138,7 @@ def test(net, epoch, name, testloader, vis=True, mse=False):
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
-                metric_value = per_class_mse(outputs, labels, i).cpu().numpy()[0]
+                metric_value = per_class_mse(outputs, labels, i).cpu().numpy()
             metric_dict[i] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{name}_per_class/class_{class_name}')
