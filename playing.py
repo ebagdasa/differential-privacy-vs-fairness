@@ -173,7 +173,11 @@ def train_dp(trainloader, model, optimizer, epoch):
                      new_grad = tensor.grad
                 #logger.info('new grad: ', new_grad)
                      saved_var[tensor_name].add_(new_grad)
-            model.zero_grad()
+            try:
+                model.zero_grad()
+            except Exception as e:
+                print("Exception when running model.zero_grad(): {}".format(e))
+                import ipdb;ipdb.set_trace()
 
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
