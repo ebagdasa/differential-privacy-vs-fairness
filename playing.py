@@ -354,7 +354,7 @@ if __name__ == '__main__':
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
-            classes_to_keep = (helper.params['key_to_drop'], args.majority_key)
+            classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
             binary_labels_to_true_labels = {
                 i: label for i, label in enumerate(classes_to_keep)}
         else:
@@ -363,20 +363,24 @@ if __name__ == '__main__':
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
+
+        # Recode the data to majority/minority
+        if helper.params.get('binary_mnist_task'):
+            helper.recode_labels_to_binary(classes_to_keep)
+            key_to_drop = 1
+        else:
+            key_to_drop = params['key_to_drop']
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
 
-        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'], key_to_drop=params['key_to_drop'],
-                                        number_of_entries=params['number_of_entries'])
+        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
+                                         key_to_drop=key_to_drop,
+                                         number_of_entries=params['number_of_entries'])
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, key_to_drop=params['key_to_drop'],
-              number_of_entries_test=params['number_of_entries_test'])
+        helper.sampler_exponential_class_test(mu=mu, key_to_drop=key_to_drop,
+                                              number_of_entries_test=params['number_of_entries_test'])
         logger.info('after sampler test')
-        # After sampling completes, we recode the data to majority/minority
-        if helper.params.get('binary_mnist_task'):
-            helper.recode_labels_to_binary(classes_to_keep)
-
 
     helper.compute_rdp()
     if helper.params['dataset'] == 'cifar10':
