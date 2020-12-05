@@ -88,13 +88,14 @@ def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
 
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
-         label_mapping: dict=None, metric_name='accuracy'):
+         label_mapping: dict=None):
     net.eval()
     running_metric_total = 0
     n_test = 0
     i=0
     correct_labels = []
     predict_labels = []
+    metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
             if helper.params['dataset'] == 'dif':
