@@ -360,6 +360,7 @@ if __name__ == '__main__':
                 i: label for i, label in enumerate(classes_to_keep)}
         else:
             classes_to_keep = None
+            binary_labels_to_true_labels = None
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
@@ -484,7 +485,9 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        test_loss = test(net, epoch, args.name, helper.test_loader, mse=metric_name == 'mse')
+        test_loss = test(net, epoch, args.name, helper.test_loader,
+                         mse=metric_name == 'mse',
+                         label_mapping=binary_labels_to_true_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
