@@ -89,8 +89,8 @@ def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False):
     net.eval()
-    correct = 0
-    total = 0
+    running_metric_total = 0
+    n_test = 0
     i=0
     correct_labels = []
     predict_labels = []
@@ -107,18 +107,18 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False):
             check_tensor_finite(labels)
             check_tensor_finite(outputs)
 
+            n_test += labels.size(0)
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
                 correct_labels.extend([x.item() for x in labels])
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
-                main_test_metric = 100 * correct / total
+                running_metric_total += (predicted == labels).sum().item()
+                main_test_metric = 100 * running_metric_total / n_test
                 logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_test_metric}')
             else:
-                main_test_metric = compute_mse(outputs, labels)
+                running_metric_total += compute_mse(outputs, labels)
+                main_test_metric = running_metric_total / n_test
                 import ipdb;ipdb.set_trace()
-                check_tensor_finite(main_test_metric)
                 logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
 
 
