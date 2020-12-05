@@ -87,7 +87,7 @@ def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
     return mse_per_class
 
 
-def test(net, epoch, name, testloader, vis=True, mse=False):
+def test(net, epoch, name, testloader, vis=True, mse: bool = False):
     net.eval()
     correct = 0
     total = 0
@@ -469,7 +469,7 @@ if __name__ == '__main__':
     logger.info(table)
     logger.info(helper.labels)
     epoch =0
-    name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
+    metric_name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
     for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch,
@@ -478,12 +478,12 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        test_loss = test(net, epoch, name, helper.test_loader, mse=helper.params.get('criterion') == 'mse')
+        test_loss = test(net, epoch, name, helper.test_loader, mse=metric_name == 'mse')
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
                 unb_acc = test(net, epoch, name, value, vis=False)
-                plot(epoch, unb_acc, name=f'dif_unbalanced/{name}')
+                plot(epoch, unb_acc, name=f'dif_unbalanced/{metric_name}')
                 unb_acc_dict[name] = unb_acc
                 
             unb_acc_list = list(unb_acc_dict.values())
