@@ -117,6 +117,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False):
                 logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_test_metric}')
             else:
                 main_test_metric = compute_mse(outputs, labels)
+                import ipdb;ipdb.set_trace()
                 check_tensor_finite(main_test_metric)
                 logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
 
