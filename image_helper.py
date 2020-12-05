@@ -180,6 +180,7 @@ class ImageHelper(Helper):
         for idx, c in enumerate(classes):
             self.train_dataset.targets[self.train_dataset.targets == c] = idx
             self.test_dataset.targets[self.test_dataset.targets == c] = idx
+        self.labels = list(range(classes))
         return
 
     def create_loaders(self):

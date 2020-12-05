@@ -118,7 +118,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False):
             else:
                 running_metric_total += compute_mse(outputs, labels)
                 main_test_metric = running_metric_total / n_test
-                import ipdb;ipdb.set_trace()
                 logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
 
 
