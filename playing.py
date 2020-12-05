@@ -87,7 +87,8 @@ def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
     return mse_per_class
 
 
-def test(net, epoch, name, testloader, vis=True, mse: bool = False):
+def test(net, epoch, name, testloader, vis=True, mse: bool = False,
+         label_mapping: dict=None, metric_name='accuracy'):
     net.eval()
     running_metric_total = 0
     n_test = 0
@@ -114,19 +115,19 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False):
                 correct_labels.extend([x.item() for x in labels])
                 running_metric_total += (predicted == labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
-                logger.info(f'Name: {name}. Epoch {epoch}. acc: {main_test_metric}')
             else:
                 running_metric_total += compute_mse(outputs, labels)
                 main_test_metric = running_metric_total / n_test
-                logger.info(f'Name: {name}. Epoch {epoch}. MSE: {main_test_metric}')
+            logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
 
 
     if vis:
-        plot(epoch, main_test_metric, name)
+        plot(epoch, main_test_metric, metric_name)
         metric_list = list()
         metric_dict = dict()
         if not mse:
-            fig, cm = plot_confusion_matrix(correct_labels, predict_labels, labels=helper.labels, normalize=True)
+            fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
+                                            labels=helper.labels, normalize=True)
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
         for i, class_name in enumerate(helper.labels):
             if not mse:
@@ -139,18 +140,19 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False):
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(outputs, labels, i).cpu().numpy()
+                class_name = label_mapping[class_name]
             metric_dict[i] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
-            plot(epoch, metric_value, name=f'{name}_per_class/class_{class_name}')
+            plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
 
         fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class', accuracy=main_test_metric)
         writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
-        torch.save(metric_dict, f"{helper.folder_path}/test_{name}_class_{epoch}.pt")
+        torch.save(metric_dict, f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
 
-        plot(epoch, np.var(metric_list), name=f'{name}_per_class/{name}_var')
-        plot(epoch, np.max(metric_list), name=f'{name}_per_class/{name}_max')
-        plot(epoch, np.min(metric_list), name=f'{name}_per_class/{name}_min')
+        plot(epoch, np.var(metric_list), name=f'{metric_name}_per_class/{metric_name}_var')
+        plot(epoch, np.max(metric_list), name=f'{metric_name}_per_class/{metric_name}_max')
+        plot(epoch, np.min(metric_list), name=f'{metric_name}_per_class/{metric_name}_min')
 
     return main_test_metric
 
