@@ -154,6 +154,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
         plot(epoch, np.var(metric_list), name=f'{metric_name}_per_class/{metric_name}_var')
         plot(epoch, np.max(metric_list), name=f'{metric_name}_per_class/{metric_name}_max')
         plot(epoch, np.min(metric_list), name=f'{metric_name}_per_class/{metric_name}_min')
+        plot(epoch, np.max(metric_list) - np.min(metric_list),
+             name=f'{metric_name}_intra_class_max_diff/{metric_name}_intra_class_max_diff')
 
     return main_test_metric
 
