@@ -38,23 +38,26 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
-                                         'cosine/1',
-                                         'cosine/2',
-                                         'cosine/3',
-                                         'cosine/4',
-                                         'cosine/5',
-                                         'cosine/6',
-                                         'cosine/7',
-                                         'cosine/8',
-                                         'cosine/9']]}}
+                             'cosine/1',
+                             'cosine/2',
+                             'cosine/3',
+                             'cosine/4',
+                             'cosine/5',
+                             'cosine/6',
+                             'cosine/7',
+                             'cosine/8',
+                             'cosine/9']]}}
+
 
 def check_tensor_finite(x: torch.Tensor):
     if torch.isnan(x).any():
         logger.warning("nan values detected in tensor.")
-        import ipdb;ipdb.set_trace()
+        import ipdb;
+        ipdb.set_trace()
     if torch.isinf(x).any():
         logger.warning("inf values detected in tensor.")
-        import ipdb;ipdb.set_trace()
+        import ipdb;
+        ipdb.set_trace()
     return
 
 
@@ -76,8 +79,9 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         "Expected outputs and labels same shape, got shapes {} and {}".format(
             outputs.shape, labels.shape
         )
-    mse = (outputs - labels)**2
+    mse = (outputs - labels) ** 2
     return torch.mean(mse)
+
 
 def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
     per_class_idx = labels == target_class
@@ -88,11 +92,11 @@ def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
 
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
-         label_mapping: dict=None):
+         label_mapping: dict = None):
     net.eval()
     running_metric_total = 0
     n_test = 0
-    i=0
+    i = 0
     correct_labels = []
     predict_labels = []
     metric_name = 'accuracy' if not mse else 'mse'
@@ -121,7 +125,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 main_test_metric = running_metric_total / n_test
             logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
 
-
     if vis:
         plot(epoch, main_test_metric, metric_name)
         metric_list = list()
@@ -132,7 +135,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
         for i, class_name in enumerate(helper.labels):
             if not mse:
-                metric_value = cm[i][i]/cm[i].sum() * 100
+                metric_value = cm[i][i] / cm[i].sum() * 100
                 fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
                                                 labels=helper.labels, normalize=False)
                 cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
@@ -147,15 +150,21 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
 
-        fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class', accuracy=main_test_metric)
+        fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class',
+                                    accuracy=main_test_metric)
         writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
-        torch.save(metric_dict, f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
+        torch.save(metric_dict,
+                   f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
 
-        plot(epoch, np.var(metric_list), name=f'{metric_name}_per_class/{metric_name}_var')
-        plot(epoch, np.max(metric_list), name=f'{metric_name}_per_class/{metric_name}_max')
-        plot(epoch, np.min(metric_list), name=f'{metric_name}_per_class/{metric_name}_min')
+        plot(epoch, np.var(metric_list),
+             name=f'{metric_name}_per_class/{metric_name}_var')
+        plot(epoch, np.max(metric_list),
+             name=f'{metric_name}_per_class/{metric_name}_max')
+        plot(epoch, np.min(metric_list),
+             name=f'{metric_name}_per_class/{metric_name}_min')
         plot(epoch, np.max(metric_list) - np.min(metric_list),
-             name=f'{metric_name}_intra_class_max_diff/{metric_name}_intra_class_max_diff')
+             name=f'{metric_name}_intra_class_max_diff/'
+                  f'{metric_name}_intra_class_max_diff')
 
     return main_test_metric
 
@@ -171,7 +180,7 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
             inputs, idxs, labels = data
         else:
             inputs, labels = data
-        
+
         inputs = inputs.to(device)
         labels = labels.to(device, dtype=torch.float32)
         optimizer.zero_grad()
@@ -188,7 +197,7 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
         running_loss += torch.mean(loss).item()
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
-        
+
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
@@ -210,25 +219,28 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             if helper.params['dataset'] == 'dif':
-                label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(total_norm)
+                label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(
+                    total_norm)
             else:
                 label_norms[int(labels[pos])].append(total_norm)
 
             for tensor_name, tensor in model.named_parameters():
-                  if tensor.grad is not None:
-                     new_grad = tensor.grad
-                     check_tensor_finite(new_grad)
-                     check_tensor_finite(tensor)
-                #logger.info('new grad: ', new_grad)
-                     saved_var[tensor_name].add_(new_grad)
+                if tensor.grad is not None:
+                    new_grad = tensor.grad
+                    check_tensor_finite(new_grad)
+                    check_tensor_finite(tensor)
+                    # logger.info('new grad: ', new_grad)
+                    saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
                 if device.type == 'cuda':
-                    saved_var[tensor_name].add_(torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                    saved_var[tensor_name].add_(
+                        torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 else:
-                    saved_var[tensor_name].add_(torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                    saved_var[tensor_name].add_(
+                        torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
                 check_tensor_finite(tensor.grad)
 
@@ -236,13 +248,14 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
             total_grad_vec = helper.get_grad_vec(model, device)
             # logger.info(f'Total grad_vec: {torch.norm(total_grad_vec)}')
             for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
-                vec = vec/count_vecs[k]
+                vec = vec / count_vecs[k]
                 cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
-                distance = torch.norm(total_grad_vec-vec)
-                # logger.info(f'for key {k}, len: {count_vecs[k]}: {cosine}, norm: {distance}')
+                distance = torch.norm(total_grad_vec - vec)
+                # logger.info(f'for key {k}, len: {count_vecs[k]}: {cosine},
+                # norm: {distance}')
 
-                plot(i + epoch*len(trainloader), cosine, name=f'cosine/{k}')
-                plot(i + epoch*len(trainloader), distance, name=f'distance/{k}')
+                plot(i + epoch * len(trainloader), cosine, name=f'cosine/{k}')
+                plot(i + epoch * len(trainloader), distance, name=f'distance/{k}')
 
         optimizer.step()
 
@@ -275,8 +288,9 @@ def train(trainloader, model, optimizer, epoch):
         keys_input = labels == helper.params['key_to_drop']
         inputs_keys = inputs[keys_input]
 
-        inputs[keys_input] = torch.tensor(ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
-                                                                          sigma=helper.params['csigma']))
+        inputs[keys_input] = torch.tensor(
+            ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
+                                            sigma=helper.params['csigma']))
         inputs = inputs.to(device)
         labels = labels.to(device)
         # zero the parameter gradients
@@ -303,6 +317,10 @@ if __name__ == '__main__':
     parser.add_argument('--name', dest='name', required=True)
     parser.add_argument("--majority_key", default=None, type=int,
                         help="Optionally specify the majority group key (e.g. '1').")
+    parser.add_argument("--number_of_entries_train", default=None, type=int,
+                        help="Optional number of minority class entries/size to "
+                             "downsample to; if provided, this value overrides value in "
+                             ".yaml parameters.")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
     writer = SummaryWriter(log_dir=f'runs/{args.name}')
@@ -378,13 +396,19 @@ if __name__ == '__main__':
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
-
+        if args.number_of_entries_train:
+            number_of_entries_train = args.number_of_entries_train
+            print("[INFO] overriding number of entries in parameters file; "
+                  "using %s entries" % number_of_entries_train)
+        else:
+            number_of_entries_train = params['number_of_entries']
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
                                          key_to_drop=key_to_drop,
-                                         number_of_entries=params['number_of_entries'])
+                                         number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
         helper.sampler_exponential_class_test(mu=mu, key_to_drop=key_to_drop,
-                                              number_of_entries_test=params['number_of_entries_test'])
+                                              number_of_entries_test=params[
+                                                  'number_of_entries_test'])
         logger.info('after sampler test')
 
     helper.compute_rdp()
@@ -396,7 +420,7 @@ if __name__ == '__main__':
         num_classes = len(classes_to_keep)
     elif helper.params['dataset'] == 'inat':
         num_classes = len(helper.labels)
-        logger.info('num class: ', num_classes)  
+        logger.info('num class: ', num_classes)
     elif helper.params['dataset'] == 'dif':
         num_classes = len(helper.labels)
     else:
@@ -422,14 +446,15 @@ if __name__ == '__main__':
         net = inception_v3(pretrained=True)
         net.fc = nn.Linear(2048, num_classes)
         net.aux_logits = False
-        #model = torch.nn.DataParallel(model).cuda()
+        # model = torch.nn.DataParallel(model).cuda()
     elif helper.params['model'] == 'mobilenet':
         net = MobileNetV2(n_class=num_classes, input_size=64)
     elif helper.params['model'] == 'word':
         net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
-                 ninp=helper.params['emsize'], nhid=helper.params['nhid'],
-                 nlayers=helper.params['nlayers'],
-                 dropout=helper.params['dropout'], tie_weights=helper.params['tied'])
+                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
+                       nlayers=helper.params['nlayers'],
+                       dropout=helper.params['dropout'],
+                       tie_weights=helper.params['tied'])
     elif helper.params['model'] == 'regressionnet':
         net = RegressionNet(output_dim=1)
     else:
@@ -440,7 +465,6 @@ if __name__ == '__main__':
         net = nn.DataParallel(net)
 
     net.to(device)
-
 
     if helper.params.get('resumed_model', False):
         logger.info('Resuming training...')
@@ -453,7 +477,10 @@ if __name__ == '__main__':
     else:
         helper.start_epoch = 1
 
-    logger.info(f'Total number of params for model {helper.params["model"]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}')
+    logger.info(
+        f'Total number of params for model {helper.params["model"
+    ""]}: {sum(p.numel() for p in net.parameters() if p.requires_grad)}
+    ')
     if helper.params.get('criterion') == 'mse':
         print('[DEBUG] using MSE loss')
         criterion = nn.MSELoss(reduction='none')
@@ -463,24 +490,26 @@ if __name__ == '__main__':
         criterion = nn.CrossEntropyLoss()
 
     if helper.params['optimizer'] == 'SGD':
-        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
+                              weight_decay=decay)
     elif helper.params['optimizer'] == 'Adam':
         optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=decay)
     else:
         raise Exception('Specify `optimizer` in params.yaml.')
 
-
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=[0.5 * epochs,
-                                                                 0.75 * epochs], gamma=0.1)
+                                                                 0.75 * epochs],
+                                                     gamma=0.1)
 
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
     logger.info(helper.labels)
-    epoch =0
+    epoch = 0
     metric_name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
-    for epoch in range(helper.start_epoch, epochs):  # loop over the dataset multiple times
+    for epoch in range(helper.start_epoch,
+                       epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch,
                      labels_mapping=binary_labels_to_true_labels)
@@ -493,11 +522,12 @@ if __name__ == '__main__':
                          label_mapping=binary_labels_to_true_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
-            for name, value in sorted(helper.unbalanced_loaders.items(), key=lambda x: x[0]):
+            for name, value in sorted(helper.unbalanced_loaders.items(),
+                                      key=lambda x: x[0]):
                 unb_acc = test(net, epoch, args.name, value, vis=False)
                 plot(epoch, unb_acc, name=f'dif_unbalanced/{metric_name}')
                 unb_acc_dict[name] = unb_acc
-                
+
             unb_acc_list = list(unb_acc_dict.values())
             logger.info(f'Accuracy on unbalanced set: {sorted(unb_acc_list)}')
 
@@ -512,6 +542,6 @@ if __name__ == '__main__':
             torch.save(unb_acc_dict, f"{helper.folder_path}/acc_subgroup_{epoch}.pt")
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/subgroup')
 
-
         helper.save_model(net, epoch, test_loss)
-    logger.info(f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
+    logger.info(
+        f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
