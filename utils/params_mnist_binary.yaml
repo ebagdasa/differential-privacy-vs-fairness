@@ -9,7 +9,7 @@ decay: 0
 # since we are not using clipping (Z is undefined/infinite),
 # we can explicitly set sigma.
 S: inf
-sigma: 1
+sigma: 10
 z: 0.8
 dp: True
 epochs: 60
