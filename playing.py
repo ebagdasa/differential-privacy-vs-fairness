@@ -410,8 +410,8 @@ if __name__ == '__main__':
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
-
-    helper.compute_rdp()
+    if dp:
+        helper.compute_rdp()
     if helper.params['dataset'] == 'cifar10':
         num_classes = 10
     elif helper.params['dataset'] == 'cifar100':
