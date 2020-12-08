@@ -52,12 +52,8 @@ layout = {'cosine': {
 def check_tensor_finite(x: torch.Tensor):
     if torch.isnan(x).any():
         logger.warning("nan values detected in tensor.")
-        import ipdb;
-        ipdb.set_trace()
     if torch.isinf(x).any():
         logger.warning("inf values detected in tensor.")
-        import ipdb;
-        ipdb.set_trace()
     return
 
 
@@ -292,14 +288,13 @@ def train(trainloader, model, optimizer, epoch):
             ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
                                             sigma=helper.params['csigma']))
         inputs = inputs.to(device)
-        labels = labels.to(device)
+        labels = labels.to(device, dtype=torch.float32)
         # zero the parameter gradients
         optimizer.zero_grad()
 
         # forward + backward + optimize
         outputs = model(inputs)
         loss = criterion(outputs, labels)
-
         loss.backward()
         optimizer.step()
         # logger.info statistics
@@ -482,13 +477,19 @@ if __name__ == '__main__':
             helper.params["model"],
             sum(p.numel() for p in net.parameters() if p.requires_grad)
         ))
-    if helper.params.get('criterion') == 'mse':
+
+    # For DP training, no loss reduction is used; otherwise, use default (mean) reduction.
+    if helper.params.get('criterion') == 'mse':  # Case: MSE objective.
         print('[DEBUG] using MSE loss')
-        criterion = nn.MSELoss(reduction='none')
-    elif dp:
-        criterion = nn.CrossEntropyLoss(reduction='none')
-    else:
-        criterion = nn.CrossEntropyLoss()
+        if dp:
+            criterion = nn.MSELoss(reduction='none')
+        else:
+            criterion = nn.MSELoss()
+    else:  # Case: not MSE; use cross-entropy objective.
+        if dp:
+            criterion = nn.CrossEntropyLoss(reduction='none')
+        else:
+            criterion = nn.CrossEntropyLoss()
 
     if helper.params['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
