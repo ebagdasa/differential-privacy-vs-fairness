@@ -1,0 +1,39 @@
+test_batch_size: 100
+batch_size: 256
+num_microbatches: 256
+lr: 0.01
+momentum: 0.5
+decay: 0
+
+
+S: False
+sigma: False
+z: False
+dp: False
+epochs: 60
+save_on_epochs: [10, 50, 100, 200]
+
+mu: 1.0
+ds_size: 60000
+
+#resumed_model: model_utk_May.16_15.10.07/model_last.pt.tar
+
+binary_mnist_task: True
+
+key_to_drop: 8  # This will also be used as the 'minority group' in binary tasks.
+number_of_entries: 500
+number_of_entries_test: 1000
+optimizer: SGD
+criterion: mse
+
+save_model: False
+dataset: mnist
+model: regressionnet
+densenet_depth: 100
+scheduler: False
+multi_gpu: False
+
+
+count_norm_cosine_per_batch: False
+
+csigma: 0.9
