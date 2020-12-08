@@ -119,7 +119,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             else:
                 running_metric_total += compute_mse(outputs, labels)
                 main_test_metric = running_metric_total / n_test
-            logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
+            # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
