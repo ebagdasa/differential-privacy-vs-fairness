@@ -231,12 +231,15 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
-                if device.type == 'cuda':
-                    saved_var[tensor_name].add_(
-                        torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
-                else:
-                    saved_var[tensor_name].add_(
-                        torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                # Sometimes we use dp training even when sigma is set to zero (to get
+                #  gradient magnitudes); we do not add noise when sigma==0.
+                if sigma > 0:
+                    if device.type == 'cuda':
+                        saved_var[tensor_name].add_(
+                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                    else:
+                        saved_var[tensor_name].add_(
+                            torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
                 check_tensor_finite(tensor.grad)
 
