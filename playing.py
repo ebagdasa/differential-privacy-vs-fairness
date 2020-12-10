@@ -546,7 +546,7 @@ if __name__ == '__main__':
             scheduler.step()
         test_loss = test(net, epoch, args.name, helper.test_loader,
                          mse=metric_name == 'mse',
-                         label_mapping=true_labels_to_binary_labels)
+                         labels_mapping=true_labels_to_binary_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(),
