@@ -82,12 +82,13 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
 def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Tensor:
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
-    if grouped_label:
+    if grouped_label is not None:
+        # Create a new labels tensor, with all values equal to grouped_label
         per_class_labels = torch.full_like(per_class_outputs,
                                            fill_value=grouped_label, dtype=torch.float32)
     else:
-        per_class_labels = torch.full_like(per_class_outputs,
-                                           fill_value=target_class, dtype=torch.float32)
+        # Use the existing labels tensor, with all values equal to target_class
+        per_class_labels = labels[per_class_idx]
     mse_per_class = compute_mse(per_class_outputs, per_class_labels)
     return mse_per_class
 
