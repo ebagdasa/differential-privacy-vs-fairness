@@ -398,6 +398,12 @@ if __name__ == '__main__':
             classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
             true_labels_to_binary_labels = {
                 label: i for i, label in enumerate(classes_to_keep)}
+        elif helper.params.get('grouped_mnist_task'):
+            classes_to_keep = helper.params['positive_class_keys'] + \
+                              helper.params['negative_class_keys']
+            true_labels_to_binary_labels = {
+                label: int(label in helper.params['positive_class_keys'])
+                    for label in classes_to_keep}
         else:
             classes_to_keep = None
             true_labels_to_binary_labels = None
@@ -406,7 +412,9 @@ if __name__ == '__main__':
         helper.create_loaders()
         logger.info('after loader')
 
-        key_to_drop = params['key_to_drop']
+        keys_to_drop = params['key_to_drop']
+        if not isinstance(keys_to_drop, list):
+            keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
@@ -417,10 +425,10 @@ if __name__ == '__main__':
         else:
             number_of_entries_train = params['number_of_entries']
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
-                                         key_to_drop=key_to_drop,
+                                         keys_to_drop=keys_to_drop,
                                          number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, key_to_drop=key_to_drop,
+        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
