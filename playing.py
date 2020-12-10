@@ -185,7 +185,8 @@ def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
     return binary_labels
 
 
-def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
+def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=None,
+             adaptive_sigma=False):
     norm_type = 2
     model.train()
     running_loss = 0.0
@@ -203,16 +204,12 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         outputs = model(inputs)
 
-        check_tensor_finite(outputs)
-        check_tensor_finite(labels)
         if labels_mapping:
             pos_labels = [k for k,v in labels_mapping.items() if v == 1]
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
             loss = criterion(outputs, binarized_labels_tensor)
         else:
             loss = criterion(outputs, labels)
-
-        check_tensor_finite(loss)
 
         running_loss += torch.mean(loss).item()
 
@@ -221,21 +218,23 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
-        grad_vecs = dict()
+        grad_vecs_sum_by_label = dict()
+        grad_vecs = list()
         count_vecs = defaultdict(int)
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
 
+            grad_vec = helper.get_grad_vec(model, device)
+            grad_vecs.append(grad_vec)
             # Note: by default, count_norm_cosine_per_batch is set to false in our params.
             if helper.params.get('count_norm_cosine_per_batch', False):
 
-                grad_vec = helper.get_grad_vec(model, device)
                 label = labels[pos].item()
                 count_vecs[label] += 1
-                if grad_vecs.get(label, False) is not False:
-                    grad_vecs[label].add_(grad_vec)
+                if grad_vecs_sum_by_label.get(label, False) is not False:
+                    grad_vecs_sum_by_label[label].add_(grad_vec)
                 else:
-                    grad_vecs[label] = grad_vec
+                    grad_vecs_sum_by_label[label] = grad_vec
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             if helper.params['dataset'] == 'dif':
@@ -253,32 +252,29 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
                     saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
+        # Compute average norm and the sigma value (if adaptive)
+        grad_norms = [torch.norm(x, p=2) for x in grad_vecs]
+        avg_grad_norm = np.mean(grad_norms)
+        if adaptive_sigma:
+            # Case: Use adaptive noise
+            sigma_dp = alpha * avg_grad_norm
+        else:
+            # Case: Do not use adaptive noise
+            sigma_dp = sigma
+
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
                 # Sometimes we use dp training even when sigma is set to zero (to get
                 #  gradient magnitudes); we do not add noise when sigma==0.
-                if sigma > 0:
+                if (sigma > 0) or (alpha > 0):
                     if device.type == 'cuda':
                         saved_var[tensor_name].add_(
-                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
                     else:
                         saved_var[tensor_name].add_(
-                            torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                            torch.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
                 check_tensor_finite(tensor.grad)
-
-        if helper.params.get('count_norm_cosine_per_batch', False):
-            total_grad_vec = helper.get_grad_vec(model, device)
-            # logger.info(f'Total grad_vec: {torch.norm(total_grad_vec)}')
-            for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
-                vec = vec / count_vecs[k]
-                cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
-                distance = torch.norm(total_grad_vec - vec)
-                # logger.info(f'for key {k}, len: {count_vecs[k]}: {cosine},
-                # norm: {distance}')
-
-                plot(i + epoch * len(trainloader), cosine, name=f'cosine/{k}')
-                plot(i + epoch * len(trainloader), distance, name=f'distance/{k}')
 
         optimizer.step()
 
@@ -287,6 +283,7 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
     print(ssum)
+    plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
         logger.info(f"{pos}: {torch.mean(torch.stack(norms))}")
         if helper.params['dataset'] == 'dif':
@@ -373,8 +370,12 @@ if __name__ == '__main__':
     else:
         # Case: clipping bound S is not specified (no clipping);
         # sigma must be set explicitly in the params.
-        sigma = helper.params['sigma']
+        sigma = helper.params.get('sigma')
+    alpha = helper.params.get('alpha')
+    adaptive_sigma = helper.params.get('adaptive_sigma', False)
     logger.debug("sigma = %s" % sigma)
+    logger.debug("alpha = %s" % alpha)
+    logger.debug("adaptive_sigma = %s" % adaptive_sigma)
     dp = helper.params['dp']
     mu = helper.params['mu']
     logger.info(f'DP: {dp}')
@@ -541,7 +542,8 @@ if __name__ == '__main__':
                        epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch,
-                     labels_mapping=true_labels_to_binary_labels)
+                     labels_mapping=true_labels_to_binary_labels,
+                     sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
         else:
             raise NotImplementedError(
                 "Label binarization is not implemented for non-DP training.")
