@@ -254,7 +254,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
         # Compute average norm and the sigma value (if adaptive)
         grad_norms = [torch.norm(x, p=2) for x in grad_vecs]
-        avg_grad_norm = np.mean(grad_norms)
+        avg_grad_norm = torch.mean(torch.stack(grad_norms))
         if adaptive_sigma:
             # Case: Use adaptive noise
             sigma_dp = alpha * avg_grad_norm
