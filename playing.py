@@ -266,7 +266,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             if tensor.grad is not None:
                 # Sometimes we use dp training even when sigma is set to zero (to get
                 #  gradient magnitudes); we do not add noise when sigma==0.
-                if (sigma > 0) or (alpha > 0):
+                if sigma_dp > 0:
                     if device.type == 'cuda':
                         saved_var[tensor_name].add_(
                             torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
