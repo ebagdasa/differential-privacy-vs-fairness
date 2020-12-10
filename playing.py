@@ -79,16 +79,21 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     return torch.mean(mse)
 
 
-def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
+def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Tensor:
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
-    per_class_labels = labels[per_class_idx]
+    if grouped_label:
+        per_class_labels = torch.full_like(per_class_outputs,
+                                           fill_value=grouped_label, dtype=torch.float32)
+    else:
+        per_class_labels = torch.full_like(per_class_outputs,
+                                           fill_value=target_class, dtype=torch.float32)
     mse_per_class = compute_mse(per_class_outputs, per_class_labels)
     return mse_per_class
 
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
-         label_mapping: dict = None):
+         labels_mapping: dict = None):
     net.eval()
     running_metric_total = 0
     n_test = 0
@@ -117,7 +122,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 running_metric_total += (predicted == labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
             else:
-                running_metric_total += compute_mse(outputs, labels)
+                assert labels_mapping, "provide labels_mapping to use mse."
+                pos_labels = [k for k, v in labels_mapping.items() if v == 1]
+                binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+
+                running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
             # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
 
@@ -139,8 +148,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
-                metric_value = per_class_mse(outputs, labels, i).cpu().numpy()
-                class_name = label_mapping[class_name]
+                # TODO(jpgard): the dictionary key/values have been swapped; need to reverse this (or not use lookup at all?)
+                metric_value = per_class_mse(
+                    outputs, labels, i, grouped_label=labels_mapping[i]
+                ).cpu().numpy()
+                class_name = i
             metric_dict[i] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
@@ -165,6 +177,15 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     return main_test_metric
 
 
+def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
+    binary_labels = torch.zeros_like(labels)
+    for l in pos_labels:
+        is_l = (labels == l)
+        binary_labels += is_l.type(torch.float32)
+    assert torch.max(binary_labels) <= 1., "Sanity check on binarized grouped labels."
+    return binary_labels
+
+
 def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
     norm_type = 2
     model.train()
@@ -185,8 +206,12 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         check_tensor_finite(outputs)
         check_tensor_finite(labels)
-
-        loss = criterion(outputs, labels)
+        if labels_mapping:
+            pos_labels = [k for k,v in labels_mapping.items() if v == 1]
+            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+            loss = criterion(outputs, binarized_labels_tensor)
+        else:
+            loss = criterion(outputs, labels)
 
         check_tensor_finite(loss)
 
@@ -375,22 +400,17 @@ if __name__ == '__main__':
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
             classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
-            binary_labels_to_true_labels = {
-                i: label for i, label in enumerate(classes_to_keep)}
+            true_labels_to_binary_labels = {
+                label: i for i, label in enumerate(classes_to_keep)}
         else:
             classes_to_keep = None
-            binary_labels_to_true_labels = None
+            true_labels_to_binary_labels = None
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
 
-        # Recode the data to majority/minority
-        if helper.params.get('binary_mnist_task'):
-            helper.recode_labels_to_binary(classes_to_keep)
-            key_to_drop = 1
-        else:
-            key_to_drop = params['key_to_drop']
+        key_to_drop = params['key_to_drop']
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
@@ -517,14 +537,16 @@ if __name__ == '__main__':
                        epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch,
-                     labels_mapping=binary_labels_to_true_labels)
+                     labels_mapping=true_labels_to_binary_labels)
         else:
+            raise NotImplementedError(
+                "Label binarization is not implemented for non-DP training.")
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
         test_loss = test(net, epoch, args.name, helper.test_loader,
                          mse=metric_name == 'mse',
-                         label_mapping=binary_labels_to_true_labels)
+                         label_mapping=true_labels_to_binary_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(),

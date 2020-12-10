@@ -173,15 +173,15 @@ class ImageHelper(Helper):
             self.labels = list(range(10))
         return
 
-    def recode_labels_to_binary(self, classes=None):
-        if not classes:
-            classes = self.test_dataset.targets.unique()
-        # Recode the labels, starting at zero
-        for idx, c in enumerate(classes):
-            self.train_dataset.targets[self.train_dataset.targets == c] = idx
-            self.test_dataset.targets[self.test_dataset.targets == c] = idx
-        self.labels = list(range(len(classes)))
-        return
+    # def recode_labels_to_binary(self, classes=None):
+    #     if not classes:
+    #         classes = self.test_dataset.targets.unique()
+    #     # Recode the labels, starting at zero
+    #     for idx, c in enumerate(classes):
+    #         self.train_dataset.targets[self.train_dataset.targets == c] = idx
+    #         self.test_dataset.targets[self.test_dataset.targets == c] = idx
+    #     self.labels = list(range(len(classes)))
+    #     return
 
     def create_loaders(self):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
