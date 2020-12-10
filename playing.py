@@ -178,7 +178,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
 
 
 def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
-    binary_labels = torch.zeros_like(labels)
+    binary_labels = torch.zeros_like(labels, dtype=torch.float32)
     for l in pos_labels:
         is_l = (labels == l)
         binary_labels += is_l.type(torch.float32)
