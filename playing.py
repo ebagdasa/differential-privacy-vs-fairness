@@ -149,7 +149,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(
-                    outputs, labels, i, grouped_label=labels_mapping[class_name]
+                    outputs, labels, class_name, grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
             metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
