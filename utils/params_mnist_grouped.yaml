@@ -1,4 +1,4 @@
-# Parameters for binary, regression experiments (e.g. 8-vs-2).
+# Parameters for grouped binary regression experiments (e.g. 8-3-vs-1-7).
 
 test_batch_size: 100
 batch_size: 256
@@ -22,10 +22,12 @@ ds_size: 60000
 
 #resumed_model: model_utk_May.16_15.10.07/model_last.pt.tar
 
-binary_mnist_task: True
+grouped_mnist_task: True
 
-key_to_drop: 8  # This will also be used as the 'minority group' in binary tasks.
-number_of_entries: 500
+key_to_drop: [3, 1]  # This will also be used as the 'minority group' in binary tasks.
+positive_class_keys: [3, 8]  # These keys are grouped into the class with label 1.
+negative_class_keys: [1,7]  # These keys are grouped into the class with label 0.
+number_of_entries: 500   # This is the sample size of the minority keys specified in key_to_drop.
 number_of_entries_test: 1000
 optimizer: SGD
 criterion: mse
