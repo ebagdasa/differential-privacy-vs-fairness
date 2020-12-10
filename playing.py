@@ -148,12 +148,10 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
-                # TODO(jpgard): the dictionary key/values have been swapped; need to reverse this (or not use lookup at all?)
                 metric_value = per_class_mse(
-                    outputs, labels, i, grouped_label=labels_mapping[i]
+                    outputs, labels, i, grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
-                class_name = i
-            metric_dict[i] = metric_value
+            metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
