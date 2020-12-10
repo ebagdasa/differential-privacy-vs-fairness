@@ -291,9 +291,6 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
         if helper.params['dataset'] == 'dif':
             plot(epoch, torch.mean(torch.stack(norms)), f'dif_norms_class/{pos}')
         else:
-            if labels_mapping:
-                # Recode the binary labels to the true label, for the Tensorboard metric
-                pos = labels_mapping[pos]
             plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
