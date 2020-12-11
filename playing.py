@@ -57,7 +57,11 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
-def make_uid(params):
+def make_uid(params, number_of_entries_train:int=None):
+    # If number_of_entries_train is provided, it overrides the params file. Otherwise,
+    # fetch the value from the params file.
+    if number_of_entries_train is None:
+        number_of_entries_train = params.get('number_of_entries')
     pos_keys = [str(i) for i in params['positive_class_keys']]
     neg_keys = [str(i) for i in params['negative_class_keys']]
     pos_keys_str = '-'.join(pos_keys)
@@ -67,7 +71,7 @@ def make_uid(params):
         dataset=params['dataset'], keys_str=keys_str,
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
-        n=params.get('number_of_entries'))
+        n=number_of_entries_train)
     return uid
 
 
@@ -358,7 +362,7 @@ if __name__ == '__main__':
 
     with open(args.params) as f:
         params = yaml.load(f)
-    name = make_uid(params)
+    name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
 
     writer = SummaryWriter(log_dir=f'runs/{name}')
     writer.add_custom_scalars(layout)
