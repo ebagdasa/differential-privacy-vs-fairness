@@ -57,6 +57,20 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
+def make_uid(params):
+    pos_keys = [str(i) for i in params['positive_class_keys']]
+    neg_keys = [str(i) for i in params['negative_class_keys']]
+    pos_keys_str = '-'.join(pos_keys)
+    neg_keys_str = '-'.join(neg_keys)
+    keys_str = pos_keys_str + '-vs-' + neg_keys_str
+    uid = "{dataset}-{keys_str}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
+        dataset=params['dataset'], keys_str=keys_str,
+        sigma=params.get('sigma'), alpha=params.get('alpha'),
+        adaptive_sigma=params.get('adaptive_sigma', False),
+        n=params.get('number_of_entries'))
+    return uid
+
+
 def plot(x, y, name):
     writer.add_scalar(tag=name, scalar_value=y, global_step=x)
 
@@ -129,7 +143,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
 
                 running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
-            # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
+            # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {
+            # main_test_metric}')
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
@@ -205,7 +220,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         outputs = model(inputs)
 
         if labels_mapping:
-            pos_labels = [k for k,v in labels_mapping.items() if v == 1]
+            pos_labels = [k for k, v in labels_mapping.items() if v == 1]
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
             loss = criterion(outputs, binarized_labels_tensor)
         else:
@@ -269,7 +284,8 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
                 if sigma_dp > 0:
                     if device.type == 'cuda':
                         saved_var[tensor_name].add_(
-                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
+                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0,
+                                                                              sigma_dp))
                     else:
                         saved_var[tensor_name].add_(
                             torch.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
@@ -330,7 +346,7 @@ def train(trainloader, model, optimizer, epoch):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
-    parser.add_argument('--name', dest='name', required=True)
+    # parser.add_argument('--name', dest='name', required=True)
     parser.add_argument("--majority_key", default=None, type=int,
                         help="Optionally specify the majority group key (e.g. '1').")
     parser.add_argument("--number_of_entries_train", default=None, type=int,
@@ -339,21 +355,25 @@ if __name__ == '__main__':
                              ".yaml parameters.")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
-    writer = SummaryWriter(log_dir=f'runs/{args.name}')
-    writer.add_custom_scalars(layout)
 
     with open(args.params) as f:
         params = yaml.load(f)
+    name = make_uid(params)
+
+    writer = SummaryWriter(log_dir=f'runs/{name}')
+    writer.add_custom_scalars(layout)
+
     if params.get('model', False) == 'word':
         helper = TextHelper(current_time=d, params=params, name='text')
 
         helper.corpus = torch.load(helper.params['corpus'])
         logger.info(helper.corpus.train.shape)
     else:
-        helper = ImageHelper(current_time=d, params=params, name=args.name)
+        helper = ImageHelper(current_time=d, params=params, name=name)
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
+    logger.info(f'experiment uid: {name}')
     logger.info(f'current path: {helper.folder_path}')
     batch_size = int(helper.params['batch_size'])
     num_microbatches = int(helper.params['num_microbatches'])
@@ -404,7 +424,7 @@ if __name__ == '__main__':
                               helper.params['negative_class_keys']
             true_labels_to_binary_labels = {
                 label: int(label in helper.params['positive_class_keys'])
-                    for label in classes_to_keep}
+                for label in classes_to_keep}
         else:
             classes_to_keep = None
             true_labels_to_binary_labels = None
@@ -550,14 +570,14 @@ if __name__ == '__main__':
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
-        test_loss = test(net, epoch, args.name, helper.test_loader,
+        test_loss = test(net, epoch, name, helper.test_loader,
                          mse=metric_name == 'mse',
                          labels_mapping=true_labels_to_binary_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(),
                                       key=lambda x: x[0]):
-                unb_acc = test(net, epoch, args.name, value, vis=False)
+                unb_acc = test(net, epoch, name, value, vis=False)
                 plot(epoch, unb_acc, name=f'dif_unbalanced/{metric_name}')
                 unb_acc_dict[name] = unb_acc
 
