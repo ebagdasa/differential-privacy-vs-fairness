@@ -79,16 +79,22 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     return torch.mean(mse)
 
 
-def per_class_mse(outputs, labels, target_class) -> torch.Tensor:
+def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Tensor:
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
-    per_class_labels = labels[per_class_idx]
+    if grouped_label is not None:
+        # Create a new labels tensor, with all values equal to grouped_label
+        per_class_labels = torch.full_like(per_class_outputs,
+                                           fill_value=grouped_label, dtype=torch.float32)
+    else:
+        # Use the existing labels tensor, with all values equal to target_class
+        per_class_labels = labels[per_class_idx]
     mse_per_class = compute_mse(per_class_outputs, per_class_labels)
     return mse_per_class
 
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
-         label_mapping: dict = None):
+         labels_mapping: dict = None):
     net.eval()
     running_metric_total = 0
     n_test = 0
@@ -117,7 +123,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 running_metric_total += (predicted == labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
             else:
-                running_metric_total += compute_mse(outputs, labels)
+                assert labels_mapping, "provide labels_mapping to use mse."
+                pos_labels = [k for k, v in labels_mapping.items() if v == 1]
+                binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+
+                running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
             # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {main_test_metric}')
 
@@ -139,9 +149,10 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
-                metric_value = per_class_mse(outputs, labels, i).cpu().numpy()
-                class_name = label_mapping[class_name]
-            metric_dict[i] = metric_value
+                metric_value = per_class_mse(
+                    outputs, labels, class_name, grouped_label=labels_mapping[class_name]
+                ).cpu().numpy()
+            metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
@@ -165,7 +176,17 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     return main_test_metric
 
 
-def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
+def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
+    binary_labels = torch.zeros_like(labels, dtype=torch.float32)
+    for l in pos_labels:
+        is_l = (labels == l)
+        binary_labels += is_l.type(torch.float32)
+    assert torch.max(binary_labels) <= 1., "Sanity check on binarized grouped labels."
+    return binary_labels
+
+
+def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=None,
+             adaptive_sigma=False):
     norm_type = 2
     model.train()
     running_loss = 0.0
@@ -183,12 +204,12 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         outputs = model(inputs)
 
-        check_tensor_finite(outputs)
-        check_tensor_finite(labels)
-
-        loss = criterion(outputs, labels)
-
-        check_tensor_finite(loss)
+        if labels_mapping:
+            pos_labels = [k for k,v in labels_mapping.items() if v == 1]
+            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+            loss = criterion(outputs, binarized_labels_tensor)
+        else:
+            loss = criterion(outputs, labels)
 
         running_loss += torch.mean(loss).item()
 
@@ -197,21 +218,23 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
-        grad_vecs = dict()
+        grad_vecs_sum_by_label = dict()
+        grad_vecs = list()
         count_vecs = defaultdict(int)
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
 
+            grad_vec = helper.get_grad_vec(model, device)
+            grad_vecs.append(grad_vec)
             # Note: by default, count_norm_cosine_per_batch is set to false in our params.
             if helper.params.get('count_norm_cosine_per_batch', False):
 
-                grad_vec = helper.get_grad_vec(model, device)
                 label = labels[pos].item()
                 count_vecs[label] += 1
-                if grad_vecs.get(label, False) is not False:
-                    grad_vecs[label].add_(grad_vec)
+                if grad_vecs_sum_by_label.get(label, False) is not False:
+                    grad_vecs_sum_by_label[label].add_(grad_vec)
                 else:
-                    grad_vecs[label] = grad_vec
+                    grad_vecs_sum_by_label[label] = grad_vec
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             if helper.params['dataset'] == 'dif':
@@ -229,32 +252,29 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
                     saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
 
+        # Compute average norm and the sigma value (if adaptive)
+        grad_norms = [torch.norm(x, p=2) for x in grad_vecs]
+        avg_grad_norm = torch.mean(torch.stack(grad_norms))
+        if adaptive_sigma:
+            # Case: Use adaptive noise
+            sigma_dp = alpha * avg_grad_norm
+        else:
+            # Case: Do not use adaptive noise
+            sigma_dp = sigma
+
         for tensor_name, tensor in model.named_parameters():
             if tensor.grad is not None:
                 # Sometimes we use dp training even when sigma is set to zero (to get
                 #  gradient magnitudes); we do not add noise when sigma==0.
-                if sigma > 0:
+                if sigma_dp > 0:
                     if device.type == 'cuda':
                         saved_var[tensor_name].add_(
-                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                            torch.cuda.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
                     else:
                         saved_var[tensor_name].add_(
-                            torch.FloatTensor(tensor.grad.shape).normal_(0, sigma))
+                            torch.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
                 check_tensor_finite(tensor.grad)
-
-        if helper.params.get('count_norm_cosine_per_batch', False):
-            total_grad_vec = helper.get_grad_vec(model, device)
-            # logger.info(f'Total grad_vec: {torch.norm(total_grad_vec)}')
-            for k, vec in sorted(grad_vecs.items(), key=lambda t: t[0]):
-                vec = vec / count_vecs[k]
-                cosine = torch.cosine_similarity(total_grad_vec, vec, dim=-1)
-                distance = torch.norm(total_grad_vec - vec)
-                # logger.info(f'for key {k}, len: {count_vecs[k]}: {cosine},
-                # norm: {distance}')
-
-                plot(i + epoch * len(trainloader), cosine, name=f'cosine/{k}')
-                plot(i + epoch * len(trainloader), distance, name=f'distance/{k}')
 
         optimizer.step()
 
@@ -263,14 +283,12 @@ def train_dp(trainloader, model, optimizer, epoch, labels_mapping=None):
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
     print(ssum)
+    plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
         logger.info(f"{pos}: {torch.mean(torch.stack(norms))}")
         if helper.params['dataset'] == 'dif':
             plot(epoch, torch.mean(torch.stack(norms)), f'dif_norms_class/{pos}')
         else:
-            if labels_mapping:
-                # Recode the binary labels to the true label, for the Tensorboard metric
-                pos = labels_mapping[pos]
             plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
@@ -352,8 +370,12 @@ if __name__ == '__main__':
     else:
         # Case: clipping bound S is not specified (no clipping);
         # sigma must be set explicitly in the params.
-        sigma = helper.params['sigma']
+        sigma = helper.params.get('sigma')
+    alpha = helper.params.get('alpha')
+    adaptive_sigma = helper.params.get('adaptive_sigma', False)
     logger.debug("sigma = %s" % sigma)
+    logger.debug("alpha = %s" % alpha)
+    logger.debug("adaptive_sigma = %s" % adaptive_sigma)
     dp = helper.params['dp']
     mu = helper.params['mu']
     logger.info(f'DP: {dp}')
@@ -375,22 +397,25 @@ if __name__ == '__main__':
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
             classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
-            binary_labels_to_true_labels = {
-                i: label for i, label in enumerate(classes_to_keep)}
+            true_labels_to_binary_labels = {
+                label: i for i, label in enumerate(classes_to_keep)}
+        elif helper.params.get('grouped_mnist_task'):
+            classes_to_keep = helper.params['positive_class_keys'] + \
+                              helper.params['negative_class_keys']
+            true_labels_to_binary_labels = {
+                label: int(label in helper.params['positive_class_keys'])
+                    for label in classes_to_keep}
         else:
             classes_to_keep = None
-            binary_labels_to_true_labels = None
+            true_labels_to_binary_labels = None
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
 
-        # Recode the data to majority/minority
-        if helper.params.get('binary_mnist_task'):
-            helper.recode_labels_to_binary(classes_to_keep)
-            key_to_drop = 1
-        else:
-            key_to_drop = params['key_to_drop']
+        keys_to_drop = params['key_to_drop']
+        if not isinstance(keys_to_drop, list):
+            keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
@@ -401,10 +426,10 @@ if __name__ == '__main__':
         else:
             number_of_entries_train = params['number_of_entries']
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
-                                         key_to_drop=key_to_drop,
+                                         keys_to_drop=keys_to_drop,
                                          number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, key_to_drop=key_to_drop,
+        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
@@ -517,14 +542,17 @@ if __name__ == '__main__':
                        epochs):  # loop over the dataset multiple times
         if dp:
             train_dp(helper.train_loader, net, optimizer, epoch,
-                     labels_mapping=binary_labels_to_true_labels)
+                     labels_mapping=true_labels_to_binary_labels,
+                     sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
         else:
+            raise NotImplementedError(
+                "Label binarization is not implemented for non-DP training.")
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
         test_loss = test(net, epoch, args.name, helper.test_loader,
                          mse=metric_name == 'mse',
-                         label_mapping=binary_labels_to_true_labels)
+                         labels_mapping=true_labels_to_binary_labels)
         unb_acc_dict = dict()
         if helper.params['dataset'] == 'dif':
             for name, value in sorted(helper.unbalanced_loaders.items(),

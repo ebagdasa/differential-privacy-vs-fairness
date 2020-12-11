@@ -11,7 +11,9 @@ decay: 0
 # since we are not using clipping (Z is undefined/infinite),
 # we can explicitly set sigma.
 S: inf
-sigma: 10
+#sigma: 1
+alpha: 1  # Setting alpha to None will cause training to default to using (non-adaptive) sigma.
+adaptive_sigma: True
 z: 0.8
 dp: True
 epochs: 60
