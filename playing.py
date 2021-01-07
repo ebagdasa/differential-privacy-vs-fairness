@@ -224,12 +224,13 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             inputs, labels = data
 
         inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.float32)
+        labels = labels.to(device)
         optimizer.zero_grad()
 
         outputs = model(inputs)
 
         if labels_mapping:
+            labels = labels.float()
             pos_labels = [k for k, v in labels_mapping.items() if v == 1]
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
             loss = criterion(outputs, binarized_labels_tensor)
