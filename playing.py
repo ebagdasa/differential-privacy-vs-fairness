@@ -504,6 +504,13 @@ if __name__ == '__main__':
         net = RegressionNet(output_dim=1)
     else:
         net = Net(output_dim=num_classes)
+
+    if helper.params['freeze_pretrained_weights']:
+        for parameter in net.parameters():
+            parameter.requires_grad = False
+        for parameter in net[-1].parameters():
+            parameter.requires_grad = True
+
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")

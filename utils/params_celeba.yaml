@@ -16,6 +16,7 @@ ds_size: 70000
 save_model: True
 dataset: celeba
 model: PretrainedRes
+freeze_pretrained_weights: True
 scheduler: False
 optimizer: Adam
 
