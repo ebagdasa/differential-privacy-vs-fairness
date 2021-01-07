@@ -442,7 +442,7 @@ if __name__ == '__main__':
         helper.create_loaders()
         logger.info('after loader')
 
-        keys_to_drop = params['key_to_drop']
+        keys_to_drop = params.get('key_to_drop')
         if not isinstance(keys_to_drop, list):
             keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
@@ -464,19 +464,7 @@ if __name__ == '__main__':
         logger.info('after sampler test')
     if dp and sigma != 0:
         helper.compute_rdp()
-    if helper.params['dataset'] == 'cifar10':
-        num_classes = 10
-    elif helper.params['dataset'] == 'cifar100':
-        num_classes = 100
-    elif helper.params['dataset'] == 'mnist' and classes_to_keep:
-        num_classes = len(classes_to_keep)
-    elif helper.params['dataset'] == 'inat':
-        num_classes = len(helper.labels)
-        logger.info('num class: ', num_classes)
-    elif helper.params['dataset'] == 'dif':
-        num_classes = len(helper.labels)
-    else:
-        num_classes = 10
+    num_classes = helper.get_num_classes(classes_to_keep)
     print('[DEBUG] num_classes is %s' % num_classes)
     reseed(5)
     if helper.params['model'] == 'densenet':

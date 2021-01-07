@@ -8,9 +8,10 @@ S: 1
 z: 1.0
 dp: True
 epochs: 300
-save_on_epochs: [10, 20, 30, 40, 50]
+save_on_epochs: [10, 50, 100, 150, 200, 250]
 
 mu: 1.0
+ds_size: 70000
 
 save_model: True
 dataset: celeba

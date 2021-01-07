@@ -317,7 +317,7 @@ class ImageHelper(Helper):
         return True
 
     def load_celeba_data(self):
-        # TODO(jpgard): set these to the true mean/SD.
+        # TODO(jpgard): set these to the true mean/SD of the training set.
         mu_data = [0,0,0]
         std_data = [1,1,1]
 
@@ -351,6 +351,20 @@ class ImageHelper(Helper):
             self.params['eval_partition_file'],
             self.params['root_dir'],
             transform_test, partition='test')
+        
+        self.labels = [0,1]
+        logger.info(f"Loaded dataset: labels: {self.labels}, "
+                    f"len_train: {len(self.train_dataset)}, "
+                    f"len_test: {len(self.test_dataset)}")
+        
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=2, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
+            num_workers=2)
+
 
     def load_dif_data(self):
 
@@ -464,3 +478,21 @@ class ImageHelper(Helper):
         plt.savefig(f'{self.folder_path}/figure__{name}_{epoch}.pdf', format='pdf')
 
         return fig
+    
+    def get_num_classes(self, classes_to_keep):
+        if self.params['dataset'] == 'cifar10':
+            num_classes = 10
+        elif self.params['dataset'] == 'cifar100':
+            num_classes = 100
+        elif self.params['dataset'] == 'mnist' and classes_to_keep:
+            num_classes = len(classes_to_keep)
+        elif self.params['dataset'] == 'inat':
+            num_classes = len(self.labels)
+            logger.info('num class: ', num_classes)
+        elif self.params['dataset'] == 'dif':
+            num_classes = len(self.labels)
+        elif self.params['dataset'] == 'celeba':
+            num_classes = len(self.labels)
+        else:
+            num_classes = 10
+        return num_classes
