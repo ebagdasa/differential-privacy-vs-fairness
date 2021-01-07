@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import numpy as np
 from skimage import io
+from torchvision.datasets.folder import default_loader
 
 
 def get_anno_df(attr_file, partition_file, partition):
@@ -37,6 +38,7 @@ class CelebADataset(torch.utils.data.Dataset):
         self.anno = get_anno_df(attr_file, partition_file, partition)
         self.root_dir = root_dir
         self.transform = transform
+        self.loader = default_loader
 
     def __len__(self):
         return len(self.anno)
@@ -47,7 +49,7 @@ class CelebADataset(torch.utils.data.Dataset):
 
         img_name = os.path.join(self.root_dir,
                                 self.anno.index[idx])
-        image = io.imread(img_name)
+        image = self.loader(img_name)
         anno = self.anno.iloc[idx, :].astype(float).to_dict()
 
         if self.transform:
