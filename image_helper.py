@@ -327,18 +327,18 @@ class ImageHelper(Helper):
         crop_to_sq = transforms.CenterCrop([178,178])
         resize = transforms.Resize(im_size)
         rotate = transforms.RandomRotation(degrees=30)
-        random_crop = transforms.RandomCrop(crop_size)
+        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
         flip_aug = transforms.RandomHorizontalFlip()
         normalize = transforms.Normalize(mean=mu_data, std=std_data)
-        center_crop = transforms.CenterCrop(crop_size)
+        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
 
         transform_train = transforms.Compose([crop_to_sq, resize,
                                               rotate, random_crop,
-                                              flip_aug, center_crop, transforms.ToTensor(),
+                                              flip_aug, transforms.ToTensor(),
                                               normalize])
         transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
                                              transforms.ToTensor(),
-                                              normalize])
+                                             normalize])
 
         self.train_dataset = CelebADataset(
             self.params['attr_file'],
