@@ -19,6 +19,7 @@ model: PretrainedRes
 scheduler: False
 optimizer: Adam
 
+target_colname: Smiling
 root_dir: /projects/grail/jpgard/celeba/img/img_align_celeba
 attr_file: /projects/grail/jpgard/celeba/anno/list_attr_celeba.txt
 eval_partition_file: /projects/grail/jpgard/celeba/eval/list_eval_partition.txt

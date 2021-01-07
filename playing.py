@@ -74,6 +74,8 @@ def make_uid(params, number_of_entries_train:int=None):
         neg_keys_str = '-'.join(neg_keys)
         keys_str = pos_keys_str + '-vs-' + neg_keys_str
         uid += '-' + keys_str
+    if params.get('target_colname'):
+        uid += '-' + params['target_colname']
     return uid
 
 
@@ -216,6 +218,8 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         if helper.params['dataset'] == 'dif':
             inputs, idxs, labels = data
+        elif helper.params['dataset'] == 'celeba':
+            inputs, anno, labels = data
         else:
             inputs, labels = data
 

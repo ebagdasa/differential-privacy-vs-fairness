@@ -26,7 +26,7 @@ def get_anno_df(attr_file, partition_file, partition):
 class CelebADataset(torch.utils.data.Dataset):
     """CelebA dataset."""
 
-    def __init__(self, attr_file, partition_file, root_dir, transform=None,
+    def __init__(self, attr_file, partition_file, root_dir, target_colname, transform=None,
                  partition='train'):
         """
         Args:
@@ -39,6 +39,7 @@ class CelebADataset(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.transform = transform
         self.loader = default_loader
+        self.target_colname = target_colname
 
     def __len__(self):
         return len(self.anno)
@@ -50,9 +51,10 @@ class CelebADataset(torch.utils.data.Dataset):
         img_name = os.path.join(self.root_dir,
                                 self.anno.index[idx])
         image = self.loader(img_name)
-        anno = self.anno.iloc[idx, :].astype(float).to_dict()
+        anno = self.anno.iloc[idx, :].astype(float).to_dict(orient='list')
+        label = torch.from_numpy(np.array(anno[self.target_colname]))
 
         if self.transform:
             image = self.transform(image)
-        sample = (image, anno)
+        sample = (image, anno, label)
         return sample
