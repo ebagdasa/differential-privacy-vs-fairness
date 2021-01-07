@@ -6,10 +6,27 @@ import numpy as np
 from skimage import io
 
 
+def get_anno_df(attr_file, partition_file, partition):
+    # Note: The partition sizes are:
+    # 0: 162769
+    # 2: 19962
+    # 1: 19867
+    assert partition in ('train', 'eval', 'test')
+    anno = pd.read_csv(attr_file, delim_whitespace=True, skiprows=0,
+                       header=1).sort_index().replace(-1, 0)
+    partitions = pd.read_csv(partition_file, delim_whitespace=True, header=None,
+                       index_col=0).sort_index()
+    partition_codes = {'train': 0, 'eval': 1, 'test': 2}
+    p = partition_codes[partition]
+    ix = (partitions.iloc[:, 0] == p).values
+    return anno[ix]
+
+
 class CelebADataset(torch.utils.data.Dataset):
     """CelebA dataset."""
 
-    def __init__(self, attr_file, root_dir, transform=None):
+    def __init__(self, attr_file, partition_file, root_dir, transform=None,
+                 partition='train'):
         """
         Args:
             attr_file (string): Path to the file with annotations.
@@ -17,8 +34,7 @@ class CelebADataset(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.anno = pd.read_csv(attr_file, delim_whitespace=True, skiprows=0,
-                                header=1).sort_index().replace(-1, 0)
+        self.anno = get_anno_df(attr_file, partition_file, partition)
         self.root_dir = root_dir
         self.transform = transform
 

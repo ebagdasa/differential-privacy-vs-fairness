@@ -336,11 +336,21 @@ class ImageHelper(Helper):
                                               rotate, random_crop,
                                               flip_aug, transforms.ToTensor(),
                                               normalize, center_crop])
+        transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
+                                             transforms.ToTensor(),
+                                              normalize])
 
         self.train_dataset = CelebADataset(
             self.params['attr_file'],
+            self.params['eval_partition_file'],
             self.params['root_dir'],
-            transform_train)
+            transform_train, partition='train')
+
+        self.test_dataset = CelebADataset(
+            self.params['attr_file'],
+            self.params['eval_partition_file'],
+            self.params['root_dir'],
+            transform_test, partition='test')
 
     def load_dif_data(self):
 
