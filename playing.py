@@ -410,6 +410,8 @@ if __name__ == '__main__':
     logger.info(lr)
     logger.info(momentum)
     reseed(5)
+    classes_to_keep = None
+    true_labels_to_binary_labels = None
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
         helper.balance_loaders()
@@ -434,8 +436,7 @@ if __name__ == '__main__':
                 label: int(label in helper.params['positive_class_keys'])
                 for label in classes_to_keep}
         else:
-            classes_to_keep = None
-            true_labels_to_binary_labels = None
+            raise ValueError
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
