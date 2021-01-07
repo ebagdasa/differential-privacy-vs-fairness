@@ -508,7 +508,7 @@ if __name__ == '__main__':
     if helper.params['freeze_pretrained_weights']:
         for parameter in net.parameters():
             parameter.requires_grad = False
-        for parameter in net[-1].parameters():
+        for parameter in net.fc.parameters():
             parameter.requires_grad = True
 
     if helper.params.get('multi_gpu', False):
