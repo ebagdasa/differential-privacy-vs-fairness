@@ -15,6 +15,7 @@ import random
 from torchvision import datasets, transforms
 import numpy as np
 from utils.dif_dataset import DiFDataset
+from utils.celeba_dataset import CelebADataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 
@@ -316,12 +317,30 @@ class ImageHelper(Helper):
         return True
 
     def load_celeba_data(self):
-        self.train_dataset = torchvision.datasets.CelebA(
-            # root=self.params['root_dir'],
-            root='./data',
-            split='train',
-            target_type='attr',
-            download=True)
+        # TODO(jpgard): set these to the true mean/SD.
+        mu_data = [0,0,0]
+        std_data = [1,1,1]
+
+        im_size = [80, 80]
+        crop_size = [64, 64]
+
+        crop_to_sq = transforms.CenterCrop([178,178])
+        resize = transforms.Resize(im_size)
+        rotate = transforms.RandomRotation(degrees=30)
+        random_crop = transforms.RandomCrop(crop_size)
+        flip_aug = transforms.RandomHorizontalFlip()
+        normalize = transforms.Normalize(mean=mu_data, std=std_data)
+        center_crop = transforms.CenterCrop(crop_size)
+
+        transform_train = transforms.Compose([crop_to_sq, resize,
+                                              rotate, random_crop,
+                                              flip_aug, transforms.ToTensor(),
+                                              normalize, center_crop])
+
+        self.train_dataset = CelebADataset(
+            self.params['attr_file'],
+            self.params['root_dir'],
+            transform_train)
 
     def load_dif_data(self):
 
