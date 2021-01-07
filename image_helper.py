@@ -315,6 +315,13 @@ class ImageHelper(Helper):
 
         return True
 
+    def load_celeba_data(self):
+        self.train_dataset = torchvision.datasets.CelebA(
+            # root=self.params['root_dir'],
+            root='./data',
+            split='train',
+            target_type='attr',
+            download=True)
 
     def load_dif_data(self):
 
