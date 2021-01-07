@@ -52,7 +52,7 @@ class CelebADataset(torch.utils.data.Dataset):
                                 self.anno.index[idx])
         image = self.loader(img_name)
         anno = self.anno.iloc[idx, :].astype(float).to_dict()
-        label_numpy = self.anno.iloc[idx, :][self.target_colname].astype(float).values
+        label_numpy = self.anno.iloc[idx, :][self.target_colname].astype(float)
         label = torch.from_numpy(label_numpy)
 
         if self.transform:
