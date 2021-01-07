@@ -353,6 +353,8 @@ class ImageHelper(Helper):
             transform_test, partition='test')
         
         self.labels = [0,1]
+        self.dataset_size = len(self.train_dataset)
+
         logger.info(f"Loaded dataset: labels: {self.labels}, "
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
