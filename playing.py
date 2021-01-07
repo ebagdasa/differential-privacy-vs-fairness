@@ -420,7 +420,6 @@ if __name__ == '__main__':
         helper.get_unbalanced_faces()
     elif helper.params['dataset'] == 'celeba':
         helper.load_celeba_data()
-        import ipdb;ipdb.set_trace()
     else:
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has
