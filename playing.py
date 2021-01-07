@@ -416,6 +416,8 @@ if __name__ == '__main__':
     elif helper.params['dataset'] == 'dif':
         helper.load_dif_data()
         helper.get_unbalanced_faces()
+    elif helper.params['dataset'] == 'celeba':
+        helper.load_celeba_data()
     else:
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has

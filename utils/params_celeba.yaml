@@ -1,0 +1,10 @@
+mu: 1.0
+
+save_model: True
+dataset: celeba
+model: PretrainedRes
+
+root_dir: /projects/grail/jpgard/celeba/img/img_align_celeba
+attr_file: /projects/grail/jpgard/celeba/anno/list_attr_celeba.txt
+
+multi_gpu: False

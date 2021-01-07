@@ -6,7 +6,6 @@ import numpy as np
 from skimage import io
 
 
-
 class CelebADataset(torch.utils.data.Dataset):
     """CelebA dataset."""
 
@@ -31,9 +30,9 @@ class CelebADataset(torch.utils.data.Dataset):
             idx = idx.tolist()
 
         img_name = os.path.join(self.root_dir,
-                                self.landmarks_frame.iloc[idx, 0])
+                                self.anno.index[idx])
         image = io.imread(img_name)
-        anno = self.anno.iloc[idx, 1:].astype(float).to_dict(orient='list')
+        anno = self.anno.iloc[idx, :].astype(float).to_dict()
 
         if self.transform:
             image = self.transform(image)
