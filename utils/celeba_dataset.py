@@ -48,6 +48,7 @@ class CelebADataset(torch.utils.data.Dataset):
         img_name = os.path.join(self.root_dir,
                                 self.anno.index[idx])
         image = io.imread(img_name)
+        image = torch.from_numpy(image)
         anno = self.anno.iloc[idx, :].astype(float).to_dict()
 
         if self.transform:
