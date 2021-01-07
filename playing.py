@@ -67,7 +67,7 @@ def make_uid(params, number_of_entries_train:int=None):
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
         n=number_of_entries_train)
-    if params['positive_class_keys'] and params['negative_class_keys']:
+    if params.get('positive_class_keys') and params.get('negative_class_keys'):
         pos_keys = [str(i) for i in params['positive_class_keys']]
         neg_keys = [str(i) for i in params['negative_class_keys']]
         pos_keys_str = '-'.join(pos_keys)
