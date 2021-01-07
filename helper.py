@@ -154,6 +154,8 @@ class Helper:
         for name, layer in model.named_parameters():
             if name == 'decoder.weight':
                 continue
+            if not layer.requires_grad:  # skip non-trainable layers
+                continue
             sum_var[size:size + layer.view(-1).shape[0]] = (layer.grad).view(-1)
             size += layer.view(-1).shape[0]
 
