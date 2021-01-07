@@ -62,16 +62,18 @@ def make_uid(params, number_of_entries_train:int=None):
     # fetch the value from the params file.
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    pos_keys = [str(i) for i in params['positive_class_keys']]
-    neg_keys = [str(i) for i in params['negative_class_keys']]
-    pos_keys_str = '-'.join(pos_keys)
-    neg_keys_str = '-'.join(neg_keys)
-    keys_str = pos_keys_str + '-vs-' + neg_keys_str
-    uid = "{dataset}-{keys_str}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
-        dataset=params['dataset'], keys_str=keys_str,
+    uid = "{dataset}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
+        dataset=params['dataset'],
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
         n=number_of_entries_train)
+    if params['positive_class_keys'] and params['negative_class_keys']:
+        pos_keys = [str(i) for i in params['positive_class_keys']]
+        neg_keys = [str(i) for i in params['negative_class_keys']]
+        pos_keys_str = '-'.join(pos_keys)
+        neg_keys_str = '-'.join(neg_keys)
+        keys_str = pos_keys_str + '-vs-' + neg_keys_str
+        uid += '-' + keys_str
     return uid
 
 
