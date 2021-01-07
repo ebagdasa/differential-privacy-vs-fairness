@@ -16,6 +16,8 @@ ds_size: 70000
 save_model: True
 dataset: celeba
 model: PretrainedRes
+scheduler: False
+optimizer: Adam
 
 root_dir: /projects/grail/jpgard/celeba/img/img_align_celeba
 attr_file: /projects/grail/jpgard/celeba/anno/list_attr_celeba.txt
