@@ -25,4 +25,4 @@ root_dir: /projects/grail/jpgard/celeba/img/img_align_celeba
 attr_file: /projects/grail/jpgard/celeba/anno/list_attr_celeba.txt
 eval_partition_file: /projects/grail/jpgard/celeba/eval/list_eval_partition.txt
 
-multi_gpu: False
+multi_gpu: True

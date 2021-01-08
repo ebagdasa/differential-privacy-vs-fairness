@@ -364,11 +364,11 @@ class ImageHelper(Helper):
         
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
-            num_workers=16, drop_last=True)
+            num_workers=8, drop_last=True)
 
         self.test_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=16)
+            num_workers=2)
 
 
     def load_dif_data(self):
