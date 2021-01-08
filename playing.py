@@ -444,6 +444,8 @@ if __name__ == '__main__':
                         help="Optional number of minority class entries/size to "
                              "downsample to; if provided, this value overrides value in "
                              ".yaml parameters.")
+    parser.add_argument("--logdir", default="./runs",
+                        help="Location to write TensorBoard logs.")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
 
@@ -451,7 +453,7 @@ if __name__ == '__main__':
         params = yaml.load(f)
     name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
 
-    writer = SummaryWriter(log_dir=f'runs/{name}')
+    writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
     writer.add_custom_scalars(layout)
 
     if params.get('model', False) == 'word':
