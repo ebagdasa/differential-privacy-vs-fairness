@@ -208,6 +208,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
+            import ipdb;ipdb.set_trace()
             plot(epoch, mean_of_tensor_list(pos_class_losses), 'test_loss_per_class/1')
             plot(epoch, mean_of_tensor_list(pos_attr_losses), 'test_loss_per_attr/1')
             plot(epoch, mean_of_tensor_list(neg_class_losses), 'test_loss_per_class/0')
