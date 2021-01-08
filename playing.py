@@ -41,7 +41,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('lft')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('lfw')
 
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
