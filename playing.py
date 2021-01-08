@@ -64,7 +64,12 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
-def add_pos_and_neg_summary_images(data_loader, max_images=16):
+def mean_of_tensor_list(lst):
+    lst = [x for x in lst if x.numel() > 0]
+    return torch.mean(torch.cat(lst))
+
+
+def add_pos_and_neg_summary_images(data_loader, max_images=64):
     images, _, labels = next(iter(data_loader))
     pos_images = images[labels==1]
     neg_images = images[labels==0]
@@ -147,8 +152,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     i = 0
     correct_labels = []
     predict_labels = []
-    pos_losses = []
-    neg_losses = []
+    pos_class_losses = []
+    neg_class_losses = []
     pos_attr_losses = []
     neg_attr_losses = []
     metric_name = 'accuracy' if not mse else 'mse'
@@ -174,8 +179,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 main_test_metric = 100 * running_metric_total / n_test
                 batch_ce_loss = ce_loss(outputs, labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                pos_losses.extend(batch_ce_loss[labels == 1])
-                neg_losses.extend(batch_ce_loss[labels == 0])
+                pos_class_losses.extend(batch_ce_loss[labels == 1])
+                neg_class_losses.extend(batch_ce_loss[labels == 0])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     batch_attr_labels = helper.get_minority_majority_annotations(idxs)
                     pos_attr_losses.extend(batch_ce_loss[batch_attr_labels == 1])
@@ -199,10 +204,10 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
-            plot(epoch, torch.mean(torch.cat(pos_losses)), 'test_loss_per_class/1')
-            plot(epoch, torch.mean(torch.cat(pos_attr_losses)), 'test_loss_per_attr/1')
-            plot(epoch, torch.mean(torch.cat(neg_losses)), 'test_loss_per_class/0')
-            plot(epoch, torch.mean(torch.cat(neg_attr_losses)), 'test_loss_per_attr/0')
+            plot(epoch, mean_of_tensor_list(pos_class_losses), 'test_loss_per_class/1')
+            plot(epoch, mean_of_tensor_list(pos_attr_losses), 'test_loss_per_attr/1')
+            plot(epoch, mean_of_tensor_list(neg_class_losses), 'test_loss_per_class/0')
+            plot(epoch, mean_of_tensor_list(neg_attr_losses), 'test_loss_per_attr/0')
         for i, class_name in enumerate(helper.labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
