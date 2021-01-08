@@ -22,5 +22,6 @@ optimizer: Adam
 
 target_colname: Smiling
 root_dir: /projects/grail/jpgard/lfw/
+label_threshold: 0.3
 
 multi_gpu: False

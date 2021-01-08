@@ -42,12 +42,15 @@ def apply_thresh(df, colname, thresh: float, use_abs=True):
         return df[df[colname] >= thresh]
 
 
-def get_anno_df(root_dir, partition):
+def get_anno_df(root_dir, partition, label_colname, label_threshold=None):
     """Fetch the dataframe of annotations and apply some preprocessing."""
     anno_fp = osp.join(root_dir, "lfw_attributes_cleaned.txt")
+
     train_fp = osp.join(root_dir, "peopleDevTrain.txt")
     test_fp = osp.join(root_dir, "peopleDevTest.txt")
     anno_df = pd.read_csv(anno_fp, delimiter="\t")
+    if label_threshold:
+        anno_df = apply_thresh(anno_df, label_colname, label_threshold)
     anno_df['imagenum_str'] = anno_df['imagenum'].apply(lambda x: f'{x:04}')
     anno_df['person'] = anno_df['person'].apply(lambda x: x.replace(" ", "_"))
     anno_df["img_basepath"] = (anno_df['person'] + '/' + anno_df['person'] + '_'
@@ -72,8 +75,11 @@ def make_lfw_file_pattern(dirname):
 class LFWDataset(torch.utils.data.Dataset):
     """LFW Dataset."""
 
-    def __init__(self, root_dir, target_colname, transform=None,
-                 partition='train', image_subdirectory="lfw-deepfunneled"):
+    def __init__(self, root_dir, target_colname,
+                 label_threshold,
+                 transform=None,
+                 partition='train', image_subdirectory="lfw-deepfunneled"
+                 ):
         """
         Args:
             attr_file (string): Path to the file with annotations.
@@ -81,7 +87,7 @@ class LFWDataset(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.anno = get_anno_df(root_dir, partition)
+        self.anno = get_anno_df(root_dir, partition, target_colname, label_threshold)
         self.root_dir = root_dir
         self.transform = transform
         self.loader = default_loader

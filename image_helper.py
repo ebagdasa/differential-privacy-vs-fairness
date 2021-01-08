@@ -387,12 +387,14 @@ class ImageHelper(Helper):
         self.train_dataset = LFWDataset(
             self.params['root_dir'],
             self.params['target_colname'],
+            self.params.get('label_threshold'),
             transform_train,
             partition='train')
 
         self.test_dataset = LFWDataset(
             self.params['root_dir'],
             self.params['target_colname'],
+            self.params.get('label_threshold'),
             transform_test,
             partition='test')
 
