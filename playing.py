@@ -36,6 +36,10 @@ from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# These are datasets that yield tuples of (images, idxs, labels) instead of
+# (images,labels).
+TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
+
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
                              'cosine/1',
@@ -216,7 +220,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
     label_norms = defaultdict(list)
     ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
-        if helper.params['dataset'] in ('dif', 'celeba'):
+        if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
             inputs, idxs, labels = data
         else:
             inputs, labels = data
