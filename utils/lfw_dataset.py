@@ -50,7 +50,8 @@ def get_anno_df(root_dir, partition):
     anno_df = pd.read_csv(anno_fp, delimiter="\t")
     anno_df['imagenum_str'] = anno_df['imagenum'].apply(lambda x: f'{x:04}')
     anno_df['person'] = anno_df['person'].apply(lambda x: x.replace(" ", "_"))
-    anno_df["img_basepath"] = anno_df['person'] + '/' + anno_df['imagenum_str'] + '.jpg'
+    anno_df["img_basepath"] = (anno_df['person'] + '/' + anno_df['person'] + '_'
+                               + anno_df['imagenum_str'] + '.jpg')
     anno_df["Mouth_Open"] = 1 - anno_df["Mouth_Closed"]
 
     # Subset to the correct partition
