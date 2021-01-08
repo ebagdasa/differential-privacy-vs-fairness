@@ -37,9 +37,9 @@ def extract_imagenum_from_filename(x):
 def apply_thresh(df, colname, thresh: float, use_abs=True):
     """Apply thresh to df[colname] to filter rows, optionally applying abs() first."""
     if use_abs:
-        return df[abs(df[colname]) >= thresh]
+        return df[abs(df[colname]) >= thresh].reset_index().drop(columns='index')
     else:
-        return df[df[colname] >= thresh]
+        return df[df[colname] >= thresh].reset_index().drop(columns='index')
 
 
 def get_anno_df(root_dir, partition, label_colname, label_threshold=None):

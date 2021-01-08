@@ -64,6 +64,19 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
+def compute_channelwise_mean(dataset):
+    means = defaultdict(list)
+    sds = defaultdict(list)
+    for (i, batch) in enumerate(dataset):
+        # batch is a set of images of shape [b, c, h, w]
+        means[0].append(torch.mean(batch[:, 0, ...]))
+        channel_zero_std = torch.std(batch[:, 0, ...])
+        means[1].append(torch.mean(batch[:, 1, ...]))
+        channel_one_std = torch.std(batch[:, 1, ...])
+        means[2].append(torch.mean(batch[:, 2, ...]))
+        channel_two_std = torch.std(batch[:, 2, ...])
+
+
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
     if len(lst_nonempty):
