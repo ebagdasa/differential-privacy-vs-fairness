@@ -67,9 +67,13 @@ def check_tensor_finite(x: torch.Tensor):
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
     if len(lst_nonempty):
-        return torch.mean(torch.stack(lst_nonempty))
+        try:
+            return torch.mean(torch.stack(lst_nonempty))
+        except:
+            import ipdb;ipdb.set_trace()
     else:
         return None
+
 
 def add_pos_and_neg_summary_images(data_loader, max_images=64):
     images, _, labels = next(iter(data_loader))
