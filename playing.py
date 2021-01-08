@@ -84,7 +84,7 @@ def compute_channelwise_mean(dataset):
         sds[1].append(torch.std(x[:, 1, ...]))
         means[2].append(torch.mean(x[:, 2, ...]))
         sds[2].append(torch.std(x[:, 2, ...]))
-        
+
     # We ignore the last batch in case it is incomplete.
     print("Channel 0 mean: %f" % mean_of_tensor_list(means[0][:-1]))
     print("Channel 1 mean: %f" % mean_of_tensor_list(means[1][:-1]))
@@ -659,8 +659,8 @@ if __name__ == '__main__':
                      labels_mapping=true_labels_to_binary_labels,
                      sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
         else:
-            raise NotImplementedError(
-                "Label binarization is not implemented for non-DP training.")
+            assert true_labels_to_binary_labels is None, \
+                "Label binarization is not implemented for non-DP training."
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
