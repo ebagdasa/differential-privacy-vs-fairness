@@ -400,7 +400,7 @@ class ImageHelper(Helper):
             transform_train,
             partition='train')
 
-        self.test_dataset = CelebADataset(
+        self.test_dataset = LFWDataset(
             self.params['root_dir'],
             self.params['target_colname'],
             transform_test,
