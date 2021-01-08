@@ -333,6 +333,8 @@ class ImageHelper(Helper):
         transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
                                              transforms.ToTensor(),
                                              normalize])
+        transform_test_unnormalized = transforms.Compose([crop_to_sq, resize, center_crop,
+                                             transforms.ToTensor()])
 
         self.train_dataset = CelebADataset(
             self.params['attr_file'],
@@ -351,7 +353,7 @@ class ImageHelper(Helper):
             self.params['root_dir'],
             self.params['target_colname'],
             self.params['attribute_colname'],
-            transform_test[:-1],
+            transform_test_unnormalized,
             partition='test')
 
         self.test_dataset = CelebADataset(
