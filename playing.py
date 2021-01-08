@@ -159,6 +159,9 @@ def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Te
     return mse_per_class
 
 
+def idx_where_true(ary):
+    return np.ravel(np.argwhere(ary.values))
+
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
     net.eval()
@@ -203,9 +206,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                     # ith entry is either 1/0/nan and correspond to the attribute labels
                     # of the ith element in the batch.
                     batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
-                    pos_attr_losses.extend(batch_ce_loss[batch_attr_labels == 1])
-                    neg_attr_losses.extend(batch_ce_loss[batch_attr_labels == 0])
-
+                    try:
+                        pos_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 1)])
+                        neg_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 0)])
+                    except Exception as e:
+                        print("[WARNING] exception when computing attribute-level loss: {}".format(e))
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
