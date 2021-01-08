@@ -15,6 +15,8 @@ import random
 from torchvision import datasets, transforms
 import numpy as np
 from utils.dif_dataset import DiFDataset
+from utils.celeba_dataset import CelebADataset
+from utils.lfw_dataset import LFWDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 
@@ -177,23 +179,13 @@ class ImageHelper(Helper):
             self.labels = list(range(10))
         return
 
-    # def recode_labels_to_binary(self, classes=None):
-    #     if not classes:
-    #         classes = self.test_dataset.targets.unique()
-    #     # Recode the labels, starting at zero
-    #     for idx, c in enumerate(classes):
-    #         self.train_dataset.targets[self.train_dataset.targets == c] = idx
-    #         self.test_dataset.targets[self.test_dataset.targets == c] = idx
-    #     self.labels = list(range(len(classes)))
-    #     return
-
     def create_loaders(self):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
-                                                        shuffle=True, drop_last=True)
+                                                        drop_last=True)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
-                                                       shuffle=True)
+                                                       )
 
     def load_faces_data(self):
 
@@ -315,6 +307,113 @@ class ImageHelper(Helper):
 
         return True
 
+    def load_celeba_data(self):
+        mu_data = [0.516785, 0.411116, 0.356696]
+        std_data = [0.298991, 0.264499, 0.256352]
+
+        im_size = [80, 80]
+        crop_size = [64, 64]
+
+        crop_to_sq = transforms.CenterCrop([178,178])
+        resize = transforms.Resize(im_size)
+        rotate = transforms.RandomRotation(degrees=30)
+        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
+        flip_aug = transforms.RandomHorizontalFlip()
+        normalize = transforms.Normalize(mean=mu_data, std=std_data)
+        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
+
+        transform_train = transforms.Compose([crop_to_sq, resize,
+                                              rotate, random_crop,
+                                              flip_aug,
+                                              transforms.ToTensor(),
+                                              normalize])
+        transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
+                                             transforms.ToTensor(),
+                                             normalize])
+
+        self.train_dataset = CelebADataset(
+            self.params['attr_file'],
+            self.params['eval_partition_file'],
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            transform_train, partition='train')
+
+        self.test_dataset = CelebADataset(
+            self.params['attr_file'],
+            self.params['eval_partition_file'],
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            transform_test, partition='test')
+
+        self.labels = [0,1]
+        self.dataset_size = len(self.train_dataset)
+
+        logger.info(f"Loaded dataset: labels: {self.labels}, "
+                    f"len_train: {len(self.train_dataset)}, "
+                    f"len_test: {len(self.test_dataset)}")
+
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=8, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
+            num_workers=2)
+
+    def load_lfw_data(self):
+        mu_data = [0.463666, 0.390829, 0.339801]
+        std_data = [0.282721, 0.253934, 0.247486]
+        im_size = [80, 80]
+        crop_size = [64, 64]
+
+        resize = transforms.Resize(im_size)
+        rotate = transforms.RandomRotation(degrees=30)
+        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
+        flip_aug = transforms.RandomHorizontalFlip()
+        normalize = transforms.Normalize(mean=mu_data, std=std_data)
+        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
+
+        transform_train = transforms.Compose([resize,
+                                              rotate, random_crop,
+                                              flip_aug,
+                                              transforms.ToTensor(),
+                                              normalize])
+        transform_test = transforms.Compose([resize, center_crop,
+                                             transforms.ToTensor(),
+                                             normalize])
+
+        self.train_dataset = LFWDataset(
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            self.params.get('label_threshold'),
+            transform_train,
+            partition='train')
+
+        self.test_dataset = LFWDataset(
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            self.params.get('label_threshold'),
+            transform_test,
+            partition='test')
+
+        self.labels = [0, 1]
+        self.dataset_size = len(self.train_dataset)
+
+        logger.info(f"Loaded dataset: labels: {self.labels}, "
+                    f"len_train: {len(self.train_dataset)}, "
+                    f"len_test: {len(self.test_dataset)}")
+
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=8, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(
+            self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
+            num_workers=2)
 
     def load_dif_data(self):
 
@@ -428,3 +527,23 @@ class ImageHelper(Helper):
         plt.savefig(f'{self.folder_path}/figure__{name}_{epoch}.pdf', format='pdf')
 
         return fig
+
+    def get_num_classes(self, classes_to_keep):
+        if self.params['dataset'] == 'cifar10':
+            num_classes = 10
+        elif self.params['dataset'] == 'cifar100':
+            num_classes = 100
+        elif self.params['dataset'] == 'mnist' and classes_to_keep:
+            num_classes = len(classes_to_keep)
+        elif self.params['dataset'] == 'inat':
+            num_classes = len(self.labels)
+            logger.info('num class: ', num_classes)
+        elif self.params['dataset'] == 'dif':
+            num_classes = len(self.labels)
+        elif self.params['dataset'] == 'celeba':
+            num_classes = len(self.labels)
+        elif self.params['dataset'] == 'lfw':
+            num_classes = len(self.labels)
+        else:
+            num_classes = 10
+        return num_classes

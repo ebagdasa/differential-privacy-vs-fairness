@@ -36,6 +36,14 @@ from inception import *
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+# These are datasets that yield tuples of (images, idxs, labels) instead of
+# (images,labels).
+TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
+
+# These are datasets where we explicitly track performance according to some majority/minority
+# attribute defined in the params.
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
+
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
                              'cosine/1',
@@ -57,26 +65,78 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
+
+def mean_of_tensor_list(lst):
+    lst_nonempty = [x for x in lst if x.numel() > 0]
+    if len(lst_nonempty):
+        return torch.mean(torch.stack(lst_nonempty))
+    else:
+        return None
+
+def compute_channelwise_mean(dataset):
+    means = defaultdict(list)
+    sds = defaultdict(list)
+    for (i, batch) in enumerate(dataset):
+        x, _, _ = batch
+        # batch is a set of images of shape [b, c, h, w]
+        means[0].append(torch.mean(x[:, 0, ...]))
+        sds[0].append(torch.std(x[:, 0, ...]))
+        means[1].append(torch.mean(x[:, 1, ...]))
+        sds[1].append(torch.std(x[:, 1, ...]))
+        means[2].append(torch.mean(x[:, 2, ...]))
+        sds[2].append(torch.std(x[:, 2, ...]))
+
+    # We ignore the last batch in case it is incomplete.
+    print("Channel 0 mean: %f" % mean_of_tensor_list(means[0][:-1]))
+    print("Channel 1 mean: %f" % mean_of_tensor_list(means[1][:-1]))
+    print("Channel 2 mean: %f" % mean_of_tensor_list(means[2][:-1]))
+    print("Channel 0 sd: %f" % mean_of_tensor_list(sds[0][:-1]))
+    print("Channel 1 sd: %f" % mean_of_tensor_list(sds[1][:-1]))
+    print("Channel 2 sd: %f" % mean_of_tensor_list(sds[2][:-1]))
+    return
+
+
+def add_pos_and_neg_summary_images(data_loader, max_images=64):
+    images, _, labels = next(iter(data_loader))
+    pos_images = images[labels==1]
+    neg_images = images[labels==0]
+    writer.add_images('pos_images', pos_images[:max_images,...])
+    writer.add_images('neg_images', neg_images[:max_images,...])
+    return
+
+
 def make_uid(params, number_of_entries_train:int=None):
     # If number_of_entries_train is provided, it overrides the params file. Otherwise,
     # fetch the value from the params file.
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    pos_keys = [str(i) for i in params['positive_class_keys']]
-    neg_keys = [str(i) for i in params['negative_class_keys']]
-    pos_keys_str = '-'.join(pos_keys)
-    neg_keys_str = '-'.join(neg_keys)
-    keys_str = pos_keys_str + '-vs-' + neg_keys_str
-    uid = "{dataset}-{keys_str}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
-        dataset=params['dataset'], keys_str=keys_str,
+    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}".format(
+        dataset=params['dataset'],
+        S=params.get('S'),
+        z=params.get('z'),
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
+        dp=str(params['dp']),
         n=number_of_entries_train)
+    if params.get('positive_class_keys') and params.get('negative_class_keys'):
+        pos_keys = [str(i) for i in params['positive_class_keys']]
+        neg_keys = [str(i) for i in params['negative_class_keys']]
+        pos_keys_str = '-'.join(pos_keys)
+        neg_keys_str = '-'.join(neg_keys)
+        keys_str = pos_keys_str + '-vs-' + neg_keys_str
+        uid += '-' + keys_str
+    if params.get('target_colname'):
+        uid += '-' + params['target_colname']
+    if params.get('attribute_colname'):
+        uid += '-' + params['attribute_colname']
+    if params.get('label_threshold'):
+        uid += '-' + str(params['label_threshold'])
     return uid
 
 
 def plot(x, y, name):
-    writer.add_scalar(tag=name, scalar_value=y, global_step=x)
+    if y is not None:
+        writer.add_scalar(tag=name, scalar_value=y, global_step=x)
 
 
 def compute_norm(model, norm_type=2):
@@ -111,18 +171,27 @@ def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Te
     return mse_per_class
 
 
+def idx_where_true(ary):
+    return np.ravel(np.argwhere(ary.values))
+
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
     net.eval()
     running_metric_total = 0
+    running_ce_loss_total = 0
+    ce_loss = nn.CrossEntropyLoss(reduction='none')
     n_test = 0
     i = 0
     correct_labels = []
     predict_labels = []
+    pos_class_losses = []
+    neg_class_losses = []
+    pos_attr_losses = []
+    neg_attr_losses = []
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
-            if helper.params['dataset'] == 'dif':
+            if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
                 inputs, idxs, labels = data
             else:
                 inputs, labels = data
@@ -140,6 +209,20 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 correct_labels.extend([x.item() for x in labels])
                 running_metric_total += (predicted == labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
+                batch_ce_loss = ce_loss(outputs, labels)
+                running_ce_loss_total += torch.mean(batch_ce_loss).item()
+                pos_class_losses.extend(batch_ce_loss[labels == 1])
+                neg_class_losses.extend(batch_ce_loss[labels == 0])
+                if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
+                    # batch_attr_labels is an array of shape [batch_size] where the
+                    # ith entry is either 1/0/nan and correspond to the attribute labels
+                    # of the ith element in the batch.
+                    batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
+                    try:
+                        pos_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 1)])
+                        neg_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 0)])
+                    except Exception as e:
+                        print("[WARNING] exception when computing attribute-level loss: {}".format(e))
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
@@ -147,8 +230,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
 
                 running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
-            # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {
-            # main_test_metric}')
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
@@ -158,6 +239,12 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
                                             labels=helper.labels, normalize=True)
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
+            avg_test_loss = running_ce_loss_total / n_test
+            plot(epoch, avg_test_loss, 'test_crossentropy_loss')
+            plot(epoch, mean_of_tensor_list(pos_class_losses), 'test_loss_per_class/1')
+            plot(epoch, mean_of_tensor_list(pos_attr_losses), 'test_loss_per_attr/1')
+            plot(epoch, mean_of_tensor_list(neg_class_losses), 'test_loss_per_class/0')
+            plot(epoch, mean_of_tensor_list(neg_attr_losses), 'test_loss_per_attr/0')
         for i, class_name in enumerate(helper.labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
@@ -212,25 +299,27 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
     label_norms = defaultdict(list)
     ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
-        if helper.params['dataset'] == 'dif':
+        if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
             inputs, idxs, labels = data
         else:
             inputs, labels = data
 
         inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.float32)
+        labels = labels.to(device)
         optimizer.zero_grad()
 
         outputs = model(inputs)
 
         if labels_mapping:
+            labels = labels.float()
             pos_labels = [k for k, v in labels_mapping.items() if v == 1]
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
             loss = criterion(outputs, binarized_labels_tensor)
         else:
             loss = criterion(outputs, labels)
 
-        running_loss += torch.mean(loss).item()
+        batch_loss = torch.mean(loss).item()
+        running_loss += batch_loss
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
 
@@ -299,17 +388,15 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
-            logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+            logger.info('[epoch %d, batch %5d] loss: %.3f' %
+                        (epoch + 1, i + 1, batch_loss))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
     print(ssum)
     plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
         logger.info(f"{pos}: {torch.mean(torch.stack(norms))}")
-        if helper.params['dataset'] == 'dif':
-            plot(epoch, torch.mean(torch.stack(norms)), f'dif_norms_class/{pos}')
-        else:
-            plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
+        plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
 def train(trainloader, model, optimizer, epoch):
@@ -317,19 +404,20 @@ def train(trainloader, model, optimizer, epoch):
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
-        if helper.params['dataset'] == 'dif':
+        if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
             inputs, idxs, labels = data
         else:
             inputs, labels = data
 
-        keys_input = labels == helper.params['key_to_drop']
-        inputs_keys = inputs[keys_input]
+        if helper.params.get('key_to_drop'):
+            keys_input = labels == helper.params['key_to_drop']
 
-        inputs[keys_input] = torch.tensor(
-            ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
-                                            sigma=helper.params['csigma']))
+            inputs[keys_input] = torch.tensor(
+                ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
+                                                sigma=helper.params['csigma']))
+
         inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.float32)
+        labels = labels.to(device)
         # zero the parameter gradients
         optimizer.zero_grad()
 
@@ -357,6 +445,8 @@ if __name__ == '__main__':
                         help="Optional number of minority class entries/size to "
                              "downsample to; if provided, this value overrides value in "
                              ".yaml parameters.")
+    parser.add_argument("--logdir", default="./runs",
+                        help="Location to write TensorBoard logs.")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
 
@@ -364,7 +454,7 @@ if __name__ == '__main__':
         params = yaml.load(f)
     name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
 
-    writer = SummaryWriter(log_dir=f'runs/{name}')
+    writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
     writer.add_custom_scalars(layout)
 
     if params.get('model', False) == 'word':
@@ -385,10 +475,10 @@ if __name__ == '__main__':
     momentum = float(helper.params['momentum'])
     decay = float(helper.params['decay'])
     epochs = int(helper.params['epochs'])
-    z = float(helper.params['z'])
+    z = helper.params.get('z')
     # If clipping bound S is not specified, it is set to inf.
-    S = float(helper.params['S'])
-    if helper.params.get('S') != 'inf':
+    S = float(helper.params['S']) if helper.params.get('S') else None
+    if helper.params.get('S') and (helper.params.get('S') != 'inf'):
         # Case: clipping bound S is specified; use this to compute sigma.
         sigma = z * S
     else:
@@ -408,6 +498,8 @@ if __name__ == '__main__':
     logger.info(lr)
     logger.info(momentum)
     reseed(5)
+    classes_to_keep = None
+    true_labels_to_binary_labels = None
     if helper.params['dataset'] == 'inat':
         helper.load_inat_data()
         helper.balance_loaders()
@@ -416,6 +508,10 @@ if __name__ == '__main__':
     elif helper.params['dataset'] == 'dif':
         helper.load_dif_data()
         helper.get_unbalanced_faces()
+    elif helper.params['dataset'] == 'celeba':
+        helper.load_celeba_data()
+    elif helper.params['dataset'] == 'lfw':
+        helper.load_lfw_data()
     else:
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has
@@ -430,14 +526,13 @@ if __name__ == '__main__':
                 label: int(label in helper.params['positive_class_keys'])
                 for label in classes_to_keep}
         else:
-            classes_to_keep = None
-            true_labels_to_binary_labels = None
+            raise ValueError
         helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
 
-        keys_to_drop = params['key_to_drop']
+        keys_to_drop = params.get('key_to_drop')
         if not isinstance(keys_to_drop, list):
             keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
@@ -459,19 +554,7 @@ if __name__ == '__main__':
         logger.info('after sampler test')
     if dp and sigma != 0:
         helper.compute_rdp()
-    if helper.params['dataset'] == 'cifar10':
-        num_classes = 10
-    elif helper.params['dataset'] == 'cifar100':
-        num_classes = 100
-    elif helper.params['dataset'] == 'mnist' and classes_to_keep:
-        num_classes = len(classes_to_keep)
-    elif helper.params['dataset'] == 'inat':
-        num_classes = len(helper.labels)
-        logger.info('num class: ', num_classes)
-    elif helper.params['dataset'] == 'dif':
-        num_classes = len(helper.labels)
-    else:
-        num_classes = 10
+    num_classes = helper.get_num_classes(classes_to_keep)
     print('[DEBUG] num_classes is %s' % num_classes)
     reseed(5)
     if helper.params['model'] == 'densenet':
@@ -506,6 +589,13 @@ if __name__ == '__main__':
         net = RegressionNet(output_dim=1)
     else:
         net = Net(output_dim=num_classes)
+
+    if helper.params['freeze_pretrained_weights']:
+        for parameter in net.parameters():
+            parameter.requires_grad = False
+        for parameter in net.fc.parameters():
+            parameter.requires_grad = True
+
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         logger.info(f"Let's use {torch.cuda.device_count()} GPUs!")
@@ -543,6 +633,11 @@ if __name__ == '__main__':
         else:
             criterion = nn.CrossEntropyLoss()
 
+    # Write sample images, for the image classification tasks
+    if helper.params['dataset'] in ('lfw', 'celeba'):
+        add_pos_and_neg_summary_images(helper.test_loader)
+        compute_channelwise_mean(helper.train_loader)
+
     if helper.params['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
                               weight_decay=decay)
@@ -569,8 +664,8 @@ if __name__ == '__main__':
                      labels_mapping=true_labels_to_binary_labels,
                      sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
         else:
-            raise NotImplementedError(
-                "Label binarization is not implemented for non-DP training.")
+            assert true_labels_to_binary_labels is None, \
+                "Label binarization is not implemented for non-DP training."
             train(helper.train_loader, net, optimizer, epoch)
         if helper.params['scheduler']:
             scheduler.step()
