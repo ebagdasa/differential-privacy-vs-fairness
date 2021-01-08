@@ -58,6 +58,8 @@ def get_anno_df(root_dir, partition):
         partition_ids = pd.read_csv(train_fp, delimiter="\t", skiprows=0)
     elif partition == 'test':
         partition_ids = pd.read_csv(test_fp, delimiter="\t", skiprows=0)
+    else:
+        raise ValueError
     partition_idx = anno_df['person'].isin(partition_ids.index)
     return anno_df[partition_idx]
 
@@ -70,7 +72,7 @@ class LFWDataset(torch.utils.data.Dataset):
     """LFW Dataset."""
 
     def __init__(self, root_dir, target_colname, transform=None,
-                 partition='train'):
+                 partition='train', image_subdirectory="lfw-deepfunneled"):
         """
         Args:
             attr_file (string): Path to the file with annotations.
@@ -83,6 +85,7 @@ class LFWDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.loader = default_loader
         self.target_colname = target_colname
+        self.image_subdirectory = image_subdirectory
 
     def __len__(self):
         return len(self.anno)
@@ -90,7 +93,8 @@ class LFWDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        img_name = os.path.join(self.root_dir, self.anno['img_basepath'][idx])
+        img_name = os.path.join(self.root_dir, self.image_subdirectory,
+                                self.anno['img_basepath'][idx])
         image = self.loader(img_name)
         soft_labels = self.anno.iloc[idx, :][self.target_colname]
         # Cast labels to 1 if > 0, and zero otherwise
