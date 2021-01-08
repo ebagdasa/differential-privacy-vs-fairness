@@ -104,15 +104,15 @@ def add_pos_and_neg_summary_images(data_loader, max_images=64):
     return
 
 
-
-
 def make_uid(params, number_of_entries_train:int=None):
     # If number_of_entries_train is provided, it overrides the params file. Otherwise,
     # fetch the value from the params file.
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    uid = "{dataset}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
+    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
         dataset=params['dataset'],
+        S=params['S'],
+        z=params['z'],
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
         n=number_of_entries_train)

@@ -7,7 +7,7 @@ decay: 5e-4
 S: 1
 z: 1.0
 dp: True
-epochs: 30
+epochs: 60
 save_on_epochs: [10, 20, 50]
 
 mu: 1.0
