@@ -24,8 +24,8 @@ def get_anno_df(attr_file, partition_file, partition, attribute_colname,
         # Subset to only include the specified subset
         attr_ix = anno_subset[attribute_colname] == train_attribute_subset
         anno_subset = anno_subset[attr_ix]
-        print("[DEBUG] attribute values in {} dataset:".format(partition))
-        print(anno_subset[attribute_colname].value_counts())
+    print("[DEBUG] attribute values in {} dataset:".format(partition))
+    print(anno_subset[attribute_colname].value_counts())
     return anno_subset
 
 
