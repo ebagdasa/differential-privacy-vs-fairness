@@ -450,8 +450,8 @@ if __name__ == '__main__':
                              ".yaml parameters.")
     parser.add_argument("--logdir", default="./runs",
                         help="Location to write TensorBoard logs.")
-    parser.add_argument("--train_attribute_subset", None,
-                        "Optional argument to the train_attribute_subset param; this"
+    parser.add_argument("--train_attribute_subset", default=None, type=int,
+                        help="Optional argument to the train_attribute_subset param; this"
                         "overrides any value which may be present for that field in the"
                         "parameters yaml file.")
     args = parser.parse_args()
