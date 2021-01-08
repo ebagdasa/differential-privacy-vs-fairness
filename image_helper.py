@@ -337,6 +337,7 @@ class ImageHelper(Helper):
             self.params['eval_partition_file'],
             self.params['root_dir'],
             self.params['target_colname'],
+            self.params['attribute_colname'],
             transform_train, partition='train')
 
         self.test_dataset = CelebADataset(
@@ -344,6 +345,7 @@ class ImageHelper(Helper):
             self.params['eval_partition_file'],
             self.params['root_dir'],
             self.params['target_colname'],
+            self.params['attribute_colname'],
             transform_test, partition='test')
         
         self.labels = [0,1]

@@ -39,9 +39,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
 TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
+
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('lfw')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 layout = {'cosine': {
     'cosine': ['Multiline', ['cosine/0',
