@@ -95,7 +95,7 @@ class LFWDataset(torch.utils.data.Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         img_name = os.path.join(self.root_dir, self.image_subdirectory,
-                                self.anno['img_basepath'][idx])
+                                self.anno['img_basepath'].iloc[idx])
         image = self.loader(img_name)
         soft_labels = self.anno.iloc[idx, :][self.target_colname]
         # Cast labels to 1 if > 0, and zero otherwise
