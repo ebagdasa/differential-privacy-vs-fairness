@@ -65,13 +65,13 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
-
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
     if len(lst_nonempty):
         return torch.mean(torch.stack(lst_nonempty))
     else:
         return None
+
 
 def compute_channelwise_mean(dataset):
     means = defaultdict(list)
@@ -98,10 +98,10 @@ def compute_channelwise_mean(dataset):
 
 def add_pos_and_neg_summary_images(data_loader, max_images=64):
     images, _, labels = next(iter(data_loader))
-    pos_images = images[labels==1]
-    neg_images = images[labels==0]
-    writer.add_images('pos_images', pos_images[:max_images,...])
-    writer.add_images('neg_images', neg_images[:max_images,...])
+    pos_images = images[labels == 1]
+    neg_images = images[labels == 0]
+    writer.add_images('pos_images', pos_images[:max_images, ...])
+    writer.add_images('neg_images', neg_images[:max_images, ...])
     return
 
 
@@ -216,6 +216,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 pos_class_losses.extend(batch_ce_loss[labels == 1])
                 neg_class_losses.extend(batch_ce_loss[labels == 0])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
+                    import ipdb;ipdb.set_trace()
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
                     # of the ith element in the batch.
