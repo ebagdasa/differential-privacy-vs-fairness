@@ -130,7 +130,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
-            if helper.params['dataset'] in ('dif', 'celeba'):
+            if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
                 inputs, idxs, labels = data
             else:
                 inputs, labels = data
