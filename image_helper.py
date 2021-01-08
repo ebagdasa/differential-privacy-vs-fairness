@@ -182,10 +182,10 @@ class ImageHelper(Helper):
     def create_loaders(self):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
-                                                        shuffle=True, drop_last=True)
+                                                        drop_last=True)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
-                                                       shuffle=True)
+                                                       )
 
     def load_faces_data(self):
 
