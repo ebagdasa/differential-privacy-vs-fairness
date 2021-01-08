@@ -129,8 +129,8 @@ def make_uid(params, number_of_entries_train:int=None):
         uid += '-' + params['target_colname']
     if params.get('attribute_colname'):
         uid += '-' + params['attribute_colname']
-    if params.get('attribute_subset'):
-        uid += '-attrsub' + params['attribute_subset']
+    if params.get('train_attribute_subset'):
+        uid += '-trattrsub' + str(params['train_attribute_subset'])
     if params.get('label_threshold'):
         uid += '-' + str(params['label_threshold'])
     return uid

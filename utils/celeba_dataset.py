@@ -1,9 +1,7 @@
 import torch
-import torchvision
 import pandas as pd
 import os
 import numpy as np
-from skimage import io
 from torchvision.datasets.folder import default_loader
 
 

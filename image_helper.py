@@ -340,7 +340,10 @@ class ImageHelper(Helper):
             self.params['root_dir'],
             self.params['target_colname'],
             self.params['attribute_colname'],
-            transform_train, partition='train')
+            transform_train,
+            partition='train',
+            train_attribute_subset=self.params.get('train_attribute_subset')
+        )
 
         self.test_dataset = CelebADataset(
             self.params['attr_file'],
@@ -348,7 +351,8 @@ class ImageHelper(Helper):
             self.params['root_dir'],
             self.params['target_colname'],
             self.params['attribute_colname'],
-            transform_test, partition='test')
+            transform_test,
+            partition='test')
 
         self.labels = [0,1]
         self.dataset_size = len(self.train_dataset)
