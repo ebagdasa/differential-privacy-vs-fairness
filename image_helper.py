@@ -322,11 +322,14 @@ class ImageHelper(Helper):
         normalize = transforms.Normalize(mean=mu_data, std=std_data)
         center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
 
-        transform_train = transforms.Compose([crop_to_sq, resize,
-                                              rotate, random_crop,
-                                              flip_aug,
-                                              transforms.ToTensor(),
-                                              normalize])
+        transform_train = transforms.Compose([
+            crop_to_sq, resize,
+            rotate, random_crop,
+            flip_aug,
+            transforms.ToTensor(),
+            normalize
+        ])
+
         transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
                                              transforms.ToTensor(),
                                              normalize])

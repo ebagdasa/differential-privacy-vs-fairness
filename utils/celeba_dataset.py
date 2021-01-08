@@ -7,7 +7,8 @@ from skimage import io
 from torchvision.datasets.folder import default_loader
 
 
-def get_anno_df(attr_file, partition_file, partition):
+def get_anno_df(attr_file, partition_file, partition, attribute_colname,
+                train_attribute_subset):
     # Note: The partition sizes are:
     # 0: 162769
     # 2: 19962
@@ -20,7 +21,14 @@ def get_anno_df(attr_file, partition_file, partition):
     partition_codes = {'train': 0, 'eval': 1, 'test': 2}
     p = partition_codes[partition]
     ix = (partitions.iloc[:, 0] == p).values
-    return anno[ix]
+    anno_subset = anno[ix].reset_index().drop(columns='index')
+    if partition == 'train' and train_attribute_subset is not None:
+        # Subset to only include the specified subset
+        attr_ix = anno_subset[attribute_colname] == train_attribute_subset
+        anno_subset = anno_subset[attr_ix].reset_index().drop(columns='index')
+        print("[DEBUG] attribute values in {} dataset:".format(partition))
+        print(anno_subset[attribute_colname].value_counts())
+    return anno_subset
 
 
 class CelebADataset(torch.utils.data.Dataset):
@@ -29,7 +37,8 @@ class CelebADataset(torch.utils.data.Dataset):
     def __init__(self, attr_file, partition_file, root_dir, target_colname,
                  attribute_colname,
                  transform=None,
-                 partition='train'):
+                 partition='train',
+                 train_attribute_subset=None):
         """
         Args:
             attr_file (string): Path to the file with annotations.
@@ -37,7 +46,8 @@ class CelebADataset(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.anno = get_anno_df(attr_file, partition_file, partition)
+        self.anno = get_anno_df(attr_file, partition_file, partition,
+                                attribute_colname, train_attribute_subset)
         self.root_dir = root_dir
         self.transform = transform
         self.loader = default_loader
