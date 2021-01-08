@@ -75,7 +75,7 @@ def make_lfw_file_pattern(dirname):
 class LFWDataset(torch.utils.data.Dataset):
     """LFW Dataset."""
 
-    def __init__(self, root_dir, target_colname,
+    def __init__(self, root_dir, target_colname, attribute_colname,
                  label_threshold,
                  transform=None,
                  partition='train', image_subdirectory="lfw-deepfunneled"
@@ -92,6 +92,9 @@ class LFWDataset(torch.utils.data.Dataset):
         self.transform = transform
         self.loader = default_loader
         self.target_colname = target_colname
+        self.attribute_colname = attribute_colname
+        self.threshold=label_threshold
+
         self.image_subdirectory = image_subdirectory
 
     def __len__(self):
@@ -113,3 +116,15 @@ class LFWDataset(torch.utils.data.Dataset):
             image = self.transform(image)
         sample = (image, idx, label)
         return sample
+
+    def get_minority_majority_annotations(self, idxs):
+        idx_annos = self.anno.iloc[idxs,][self.attribute_colname]
+        def _revalue_fn(x):
+            if x < -self.threshold:
+                return 0
+            if x > self.threshold:
+                returrn 1
+            else:
+                return np.nan
+        idx_annos = idx_annos.apply(_revalue_fn)
+        return idx_annos

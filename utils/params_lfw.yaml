@@ -21,6 +21,7 @@ scheduler: False
 optimizer: Adam
 
 target_colname: Smiling
+attribute_colname: Black
 root_dir: /projects/grail/jpgard/lfw/
 label_threshold: 0.3
 
