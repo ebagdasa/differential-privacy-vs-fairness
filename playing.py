@@ -97,11 +97,18 @@ def compute_channelwise_mean(dataset):
 
 
 def add_pos_and_neg_summary_images(data_loader, max_images=64):
-    images, _, labels = next(iter(data_loader))
-    pos_images = images[labels == 1]
-    neg_images = images[labels == 0]
-    writer.add_images('pos_images', pos_images[:max_images, ...])
-    writer.add_images('neg_images', neg_images[:max_images, ...])
+    images, idxs, labels = next(iter(data_loader))
+    attr_labels = data_loader.dataset.get_attribute_annotations(idxs)
+    pos_attr_idxs = idx_where_true(attr_labels == 1)
+    neg_attr_idxs = idx_where_true(attr_labels == 0)
+    pos_label_images = images[labels == 1]
+    neg_label_images = images[labels == 0]
+    pos_attr_images = images[pos_attr_idxs]
+    neg_attr_images = images[neg_attr_idxs]
+    writer.add_images('pos_label_images', pos_label_images[:max_images, ...])
+    writer.add_images('neg_label_images', neg_label_images[:max_images, ...])
+    writer.add_images('pos_attr_images', pos_attr_images[:max_images, ...])
+    writer.add_images('neg_attr_images', neg_attr_images[:max_images, ...])
     return
 
 
@@ -649,7 +656,7 @@ if __name__ == '__main__':
 
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in ('lfw', 'celeba'):
-        add_pos_and_neg_summary_images(helper.test_loader)
+        add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
         compute_channelwise_mean(helper.train_loader)
 
     if helper.params['optimizer'] == 'SGD':

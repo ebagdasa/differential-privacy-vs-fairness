@@ -345,6 +345,15 @@ class ImageHelper(Helper):
             train_attribute_subset=self.params.get('train_attribute_subset')
         )
 
+        self.unnormalized_test_dataset = CelebADataset(
+            self.params['attr_file'],
+            self.params['eval_partition_file'],
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            transform_test[:-1],
+            partition='test')
+
         self.test_dataset = CelebADataset(
             self.params['attr_file'],
             self.params['eval_partition_file'],
@@ -363,6 +372,10 @@ class ImageHelper(Helper):
 
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=8, drop_last=True)
+
+        self.unnormalized_test_loader = torch.utils.data.DataLoader(
+            self.unnormalized_test_dataset, batch_size=self.params['batch_size'], shuffle=True,
             num_workers=8, drop_last=True)
 
         self.test_loader = torch.utils.data.DataLoader(
