@@ -50,7 +50,7 @@ def get_anno_df(root_dir, partition):
     anno_df = pd.read_csv(anno_fp, delimiter="\t")
     anno_df['imagenum_str'] = anno_df['imagenum'].apply(lambda x: f'{x:04}')
     anno_df['person'] = anno_df['person'].apply(lambda x: x.replace(" ", "_"))
-    # anno_df.set_index(['person', 'imagenum_str'], inplace=True)
+    anno_df["img_basepath"] = anno_df['person'] + '/' + anno_df['imagenum_str'] + '.jpg'
     anno_df["Mouth_Open"] = 1 - anno_df["Mouth_Closed"]
 
     # Subset to the correct partition
@@ -90,9 +90,7 @@ class LFWDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-
-        img_name = os.path.join(self.root_dir,
-                                self.anno.index[idx])
+        img_name = os.path.join(self.root_dir, self.anno['img_basepath'][idx])
         image = self.loader(img_name)
         soft_labels = self.anno.iloc[idx, :][self.target_colname]
         # Cast labels to 1 if > 0, and zero otherwise
