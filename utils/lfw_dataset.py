@@ -117,8 +117,8 @@ class LFWDataset(torch.utils.data.Dataset):
         sample = (image, idx, label)
         return sample
 
-    def get_minority_majority_annotations(self, idxs):
-        idx_annos = self.anno.iloc[idxs,][self.attribute_colname]
+    def get_attribute_annotations(self, idxs):
+        idx_annos = self.anno.iloc[idxs, :][self.attribute_colname]
         def _revalue_fn(x):
             if x < -self.threshold:
                 return 0
