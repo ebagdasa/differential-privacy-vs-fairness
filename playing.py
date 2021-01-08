@@ -126,7 +126,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
-            if helper.params['dataset'] == 'dif':
+            if helper.params['dataset'] in ('dif', 'celeba'):
                 inputs, idxs, labels = data
             else:
                 inputs, labels = data
@@ -216,10 +216,8 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
     label_norms = defaultdict(list)
     ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
-        if helper.params['dataset'] == 'dif':
+        if helper.params['dataset'] in ('dif', 'celeba'):
             inputs, idxs, labels = data
-        elif helper.params['dataset'] == 'celeba':
-            inputs, anno, labels = data
         else:
             inputs, labels = data
 
@@ -313,10 +311,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
     plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
         logger.info(f"{pos}: {torch.mean(torch.stack(norms))}")
-        if helper.params['dataset'] == 'dif':
-            plot(epoch, torch.mean(torch.stack(norms)), f'dif_norms_class/{pos}')
-        else:
-            plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
+        plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
 def train(trainloader, model, optimizer, epoch):
@@ -427,6 +422,8 @@ if __name__ == '__main__':
         helper.get_unbalanced_faces()
     elif helper.params['dataset'] == 'celeba':
         helper.load_celeba_data()
+    elif helper.params['dataset'] == 'lfw':
+        helper.load_lfw_data()
     else:
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has

@@ -16,6 +16,7 @@ from torchvision import datasets, transforms
 import numpy as np
 from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset
+from utils.lfw_dataset import LFWDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 
@@ -370,6 +371,55 @@ class ImageHelper(Helper):
             self.train_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
             num_workers=2)
 
+    def load_lfw_data(self):
+        # TODO(jpgard): set these to the true mean/SD of the training set.
+        mu_data = [0, 0, 0]
+        std_data = [1, 1, 1]
+        im_size = [80, 80]
+        crop_size = [64, 64]
+
+        resize = transforms.Resize(im_size)
+        rotate = transforms.RandomRotation(degrees=30)
+        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
+        flip_aug = transforms.RandomHorizontalFlip()
+        normalize = transforms.Normalize(mean=mu_data, std=std_data)
+        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
+
+        transform_train = transforms.Compose([resize,
+                                              rotate, random_crop,
+                                              flip_aug,
+                                              transforms.ToTensor(),
+                                              normalize])
+        transform_test = transforms.Compose([resize, center_crop,
+                                             transforms.ToTensor(),
+                                             normalize])
+
+        self.train_dataset = LFWDataset(
+            self.params['root_dir'],
+            self.params['target_colname'],
+            transform_train,
+            partition='train')
+
+        self.test_dataset = CelebADataset(
+            self.params['root_dir'],
+            self.params['target_colname'],
+            transform_test,
+            partition='test')
+
+        self.labels = [0, 1]
+        self.dataset_size = len(self.train_dataset)
+
+        logger.info(f"Loaded dataset: labels: {self.labels}, "
+                    f"len_train: {len(self.train_dataset)}, "
+                    f"len_test: {len(self.test_dataset)}")
+
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=8, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
+            num_workers=2)
 
     def load_dif_data(self):
 
