@@ -61,6 +61,17 @@ def check_tensor_finite(x: torch.Tensor):
     return
 
 
+def add_pos_and_neg_summary_images(data_loader, max_images=16):
+    images, _, labels = next(iter(data_loader))
+    pos_images = images[labels==1]
+    neg_images = images[labels==0]
+    writer.add_images('pos_images', pos_images[:max_images,...])
+    writer.add_images('neg_images', neg_images[:max_images,...])
+    return
+
+
+
+
 def make_uid(params, number_of_entries_train:int=None):
     # If number_of_entries_train is provided, it overrides the params file. Otherwise,
     # fetch the value from the params file.
@@ -80,6 +91,8 @@ def make_uid(params, number_of_entries_train:int=None):
         uid += '-' + keys_str
     if params.get('target_colname'):
         uid += '-' + params['target_colname']
+    if params.get('label_threshold'):
+        uid += '-' + params['label_threshold']
     return uid
 
 
@@ -123,6 +136,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
     net.eval()
     running_metric_total = 0
+    running_ce_loss_total = 0
+    ce_loss = nn.CrossEntropyLoss(reduction='mean')
     n_test = 0
     i = 0
     correct_labels = []
@@ -148,6 +163,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 correct_labels.extend([x.item() for x in labels])
                 running_metric_total += (predicted == labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
+                running_ce_loss_total += ce_loss(outputs, labels).item()
+
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
@@ -155,8 +172,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
 
                 running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
-            # logger.info(f'Name: {name}. Epoch {epoch}. {metric_name}: {
-            # main_test_metric}')
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
@@ -166,6 +181,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
                                             labels=helper.labels, normalize=True)
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
+            avg_test_loss = running_ce_loss_total / n_test
+            plot(epoch, avg_test_loss, 'test_crossentropy_loss')
         for i, class_name in enumerate(helper.labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
@@ -239,7 +256,8 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         else:
             loss = criterion(outputs, labels)
 
-        running_loss += torch.mean(loss).item()
+        batch_loss = torch.mean(loss).item()
+        running_loss += batch_loss
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
 
@@ -308,7 +326,8 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         optimizer.step()
 
         if i > 0 and i % 20 == 0:
-            logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+            logger.info('[epoch %d, batch %5d] loss: %.3f' %
+                        (epoch + 1, i + 1, batch_loss))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
             running_loss = 0.0
     print(ssum)
@@ -548,6 +567,10 @@ if __name__ == '__main__':
             criterion = nn.CrossEntropyLoss(reduction='none')
         else:
             criterion = nn.CrossEntropyLoss()
+
+    # Write sample images, for the image classification tasks
+    if helper.params['dataset'] in ('lfw', 'celeba'):
+        add_pos_and_neg_summary_images(helper.test_loader)
 
     if helper.params['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
