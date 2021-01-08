@@ -92,7 +92,7 @@ def make_uid(params, number_of_entries_train:int=None):
     if params.get('target_colname'):
         uid += '-' + params['target_colname']
     if params.get('label_threshold'):
-        uid += '-' + params['label_threshold']
+        uid += '-' + str(params['label_threshold'])
     return uid
 
 
