@@ -19,11 +19,11 @@ def get_anno_df(attr_file, partition_file, partition, attribute_colname,
     partition_codes = {'train': 0, 'eval': 1, 'test': 2}
     p = partition_codes[partition]
     ix = (partitions.iloc[:, 0] == p).values
-    anno_subset = anno[ix].reset_index().drop(columns='index')
+    anno_subset = anno[ix]
     if partition == 'train' and train_attribute_subset is not None:
         # Subset to only include the specified subset
         attr_ix = anno_subset[attribute_colname] == train_attribute_subset
-        anno_subset = anno_subset[attr_ix].reset_index().drop(columns='index')
+        anno_subset = anno_subset[attr_ix]
         print("[DEBUG] attribute values in {} dataset:".format(partition))
         print(anno_subset[attribute_colname].value_counts())
     return anno_subset
