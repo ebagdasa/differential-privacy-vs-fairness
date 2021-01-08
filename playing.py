@@ -66,8 +66,10 @@ def check_tensor_finite(x: torch.Tensor):
 
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
-    return torch.mean(torch.stack(lst_nonempty))
-
+    if len(lst_nonempty):
+        return torch.mean(torch.stack(lst_nonempty))
+    else:
+        return None
 
 def add_pos_and_neg_summary_images(data_loader, max_images=64):
     images, _, labels = next(iter(data_loader))
@@ -107,7 +109,8 @@ def make_uid(params, number_of_entries_train:int=None):
 
 
 def plot(x, y, name):
-    writer.add_scalar(tag=name, scalar_value=y, global_step=x)
+    if y is not None:
+        writer.add_scalar(tag=name, scalar_value=y, global_step=x)
 
 
 def compute_norm(model, norm_type=2):
