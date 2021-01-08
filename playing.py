@@ -408,7 +408,7 @@ def train(trainloader, model, optimizer, epoch):
         else:
             inputs, labels = data
 
-        if helper.params['key_to_drop']:
+        if helper.params.get('key_to_drop'):
             keys_input = labels == helper.params['key_to_drop']
 
             inputs[keys_input] = torch.tensor(
