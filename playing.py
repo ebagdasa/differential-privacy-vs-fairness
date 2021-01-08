@@ -65,8 +65,8 @@ def check_tensor_finite(x: torch.Tensor):
 
 
 def mean_of_tensor_list(lst):
-    lst = [x for x in lst if x.numel() > 0]
-    return torch.mean(torch.cat(lst))
+    lst_nonempty = [x for x in lst if x.numel() > 0]
+    return torch.mean(torch.stack(lst_nonempty))
 
 
 def add_pos_and_neg_summary_images(data_loader, max_images=64):
