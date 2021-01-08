@@ -362,9 +362,8 @@ class ImageHelper(Helper):
             num_workers=2)
 
     def load_lfw_data(self):
-        # TODO(jpgard): set these to the true mean/SD of the training set.
-        mu_data = [0, 0, 0]
-        std_data = [1, 1, 1]
+        mu_data = [0.463666, 0.390829, 0.339801]
+        std_data = [0.282721, 0.253934, 0.247486]
         im_size = [80, 80]
         crop_size = [64, 64]
 
