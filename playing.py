@@ -109,12 +109,13 @@ def make_uid(params, number_of_entries_train:int=None):
     # fetch the value from the params file.
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-n{n}".format(
+    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}".format(
         dataset=params['dataset'],
-        S=params['S'],
-        z=params['z'],
+        S=params.get('S'),
+        z=params.get('z'),
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
+        dp=str(params['dp']),
         n=number_of_entries_train)
     if params.get('positive_class_keys') and params.get('negative_class_keys'):
         pos_keys = [str(i) for i in params['positive_class_keys']]
@@ -402,13 +403,12 @@ def train(trainloader, model, optimizer, epoch):
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
-        if helper.params['dataset'] == 'dif':
+        if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
             inputs, idxs, labels = data
         else:
             inputs, labels = data
 
         keys_input = labels == helper.params['key_to_drop']
-        inputs_keys = inputs[keys_input]
 
         inputs[keys_input] = torch.tensor(
             ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
