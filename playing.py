@@ -306,6 +306,10 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
         inputs = inputs.to(device)
         labels = labels.to(device)
+
+        if helper.hasattr("gpu_transform_train"):
+            inputs = helper.gpu_transform_train(inputs)
+
         optimizer.zero_grad()
 
         outputs = model(inputs)
