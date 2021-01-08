@@ -123,7 +123,7 @@ class LFWDataset(torch.utils.data.Dataset):
             if x < -self.threshold:
                 return 0
             if x > self.threshold:
-                returrn 1
+                return 1
             else:
                 return np.nan
         idx_annos = idx_annos.apply(_revalue_fn)
