@@ -308,9 +308,8 @@ class ImageHelper(Helper):
         return True
 
     def load_celeba_data(self):
-        # TODO(jpgard): set these to the true mean/SD of the training set.
-        mu_data = [0,0,0]
-        std_data = [1,1,1]
+        mu_data = [0.516785, 0.411116, 0.356696]
+        std_data = [0.298991, 0.264499, 0.256352]
 
         im_size = [80, 80]
         crop_size = [64, 64]
@@ -347,14 +346,14 @@ class ImageHelper(Helper):
             self.params['target_colname'],
             self.params['attribute_colname'],
             transform_test, partition='test')
-        
+
         self.labels = [0,1]
         self.dataset_size = len(self.train_dataset)
 
         logger.info(f"Loaded dataset: labels: {self.labels}, "
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
-        
+
         self.train_loader = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
             num_workers=8, drop_last=True)
@@ -528,7 +527,7 @@ class ImageHelper(Helper):
         plt.savefig(f'{self.folder_path}/figure__{name}_{epoch}.pdf', format='pdf')
 
         return fig
-    
+
     def get_num_classes(self, classes_to_keep):
         if self.params['dataset'] == 'cifar10':
             num_classes = 10
