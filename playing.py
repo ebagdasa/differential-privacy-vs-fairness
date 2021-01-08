@@ -216,16 +216,17 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 pos_class_losses.extend(batch_ce_loss[labels == 1])
                 neg_class_losses.extend(batch_ce_loss[labels == 0])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
-                    import ipdb;ipdb.set_trace()
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
                     # of the ith element in the batch.
-                    batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
                     try:
+                        batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
                         pos_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 1)])
                         neg_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 0)])
                     except Exception as e:
-                        print("[WARNING] exception when computing attribute-level loss: {}".format(e))
+                        print("[WARNING] exception when computing"
+                              "attribute-level loss: {}".format(e))
+                        import ipdb;ipdb.set_trace()
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
