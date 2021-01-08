@@ -67,10 +67,7 @@ def check_tensor_finite(x: torch.Tensor):
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
     if len(lst_nonempty):
-        try:
-            return torch.mean(torch.stack(lst_nonempty))
-        except:
-            import ipdb;ipdb.set_trace()
+        return torch.mean(torch.stack(lst_nonempty))
     else:
         return None
 
