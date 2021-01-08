@@ -470,10 +470,10 @@ if __name__ == '__main__':
     momentum = float(helper.params['momentum'])
     decay = float(helper.params['decay'])
     epochs = int(helper.params['epochs'])
-    z = float(helper.params['z'])
+    z = helper.params.get('z')
     # If clipping bound S is not specified, it is set to inf.
-    S = float(helper.params['S'])
-    if helper.params.get('S') != 'inf':
+    S = float(helper.params['S']) if helper.params.get('S') else None
+    if helper.params.get('S') and (helper.params.get('S') != 'inf'):
         # Case: clipping bound S is specified; use this to compute sigma.
         sigma = z * S
     else:
