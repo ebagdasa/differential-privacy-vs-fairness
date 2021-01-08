@@ -408,13 +408,15 @@ def train(trainloader, model, optimizer, epoch):
         else:
             inputs, labels = data
 
-        keys_input = labels == helper.params['key_to_drop']
+        if helper.params['key_to_drop']:
+            keys_input = labels == helper.params['key_to_drop']
 
-        inputs[keys_input] = torch.tensor(
-            ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
-                                            sigma=helper.params['csigma']))
+            inputs[keys_input] = torch.tensor(
+                ndimage.filters.gaussian_filter(inputs[keys_input].numpy(),
+                                                sigma=helper.params['csigma']))
+
         inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.float32)
+        labels = labels.to(device)
         # zero the parameter gradients
         optimizer.zero_grad()
 
