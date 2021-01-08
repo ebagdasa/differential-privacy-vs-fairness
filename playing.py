@@ -186,7 +186,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 pos_class_losses.extend(batch_ce_loss[labels == 1])
                 neg_class_losses.extend(batch_ce_loss[labels == 0])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
-                    batch_attr_labels = helper.get_minority_majority_annotations(idxs)
+                    batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
                     pos_attr_losses.extend(batch_ce_loss[batch_attr_labels == 1])
                     neg_attr_losses.extend(batch_ce_loss[batch_attr_labels == 0])
 
