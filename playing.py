@@ -450,11 +450,20 @@ if __name__ == '__main__':
                              ".yaml parameters.")
     parser.add_argument("--logdir", default="./runs",
                         help="Location to write TensorBoard logs.")
+    parser.add_argument("--train_attribute_subset", None,
+                        "Optional argument to the train_attribute_subset param; this"
+                        "overrides any value which may be present for that field in the"
+                        "parameters yaml file.")
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
 
     with open(args.params) as f:
         params = yaml.load(f)
+
+    if args.train_attribute_subset is not None:
+        print("[INFO] overriding train_attribute_subset with value from command: {}"
+              .format(args.train_attribute_subset))
+        params['train_attribute_subset'] = args.train_attribute_subset
     name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
 
     writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
