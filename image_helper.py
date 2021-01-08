@@ -377,7 +377,7 @@ class ImageHelper(Helper):
             num_workers=8, drop_last=True)
 
         self.unnormalized_test_loader = torch.utils.data.DataLoader(
-            self.unnormalized_test_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
             num_workers=8, drop_last=True)
 
         self.test_loader = torch.utils.data.DataLoader(

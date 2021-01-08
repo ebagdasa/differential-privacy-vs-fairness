@@ -140,6 +140,8 @@ def make_uid(params, number_of_entries_train:int=None):
         uid += '-trattrsub' + str(params['train_attribute_subset'])
     if params.get('label_threshold'):
         uid += '-' + str(params['label_threshold'])
+    if params.get('freeze_pretrained_weights'):
+        uid += '-freezept'
     return uid
 
 
