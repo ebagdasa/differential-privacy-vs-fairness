@@ -65,7 +65,8 @@ def get_anno_df(root_dir, partition, label_colname, label_threshold=None):
     else:
         raise ValueError
     partition_idx = anno_df['person'].isin(partition_ids.index)
-    return anno_df[partition_idx]
+    df_out = anno_df[partition_idx].reset_index().drop(columns='index')
+    return df_out
 
 
 def make_lfw_file_pattern(dirname):
