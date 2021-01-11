@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 from torchvision.datasets.folder import default_loader
+from torchvision import transforms
 
 
 def get_anno_df(attr_file, partition_file, partition, attribute_colname,
@@ -15,7 +16,7 @@ def get_anno_df(attr_file, partition_file, partition, attribute_colname,
     anno = pd.read_csv(attr_file, delim_whitespace=True, skiprows=0,
                        header=1).sort_index().replace(-1, 0)
     partitions = pd.read_csv(partition_file, delim_whitespace=True, header=None,
-                       index_col=0).sort_index()
+                             index_col=0).sort_index()
     partition_codes = {'train': 0, 'eval': 1, 'test': 2}
     p = partition_codes[partition]
     ix = (partitions.iloc[:, 0] == p).values
@@ -27,6 +28,46 @@ def get_anno_df(attr_file, partition_file, partition, attribute_colname,
     print("[DEBUG] attribute values in {} dataset:".format(partition))
     print(anno_subset[attribute_colname].value_counts())
     return anno_subset
+
+
+def get_transforms(partition: str, normalize: bool = True):
+    mu_data = [0.516785, 0.411116, 0.356696]
+    std_data = [0.298991, 0.264499, 0.256352]
+
+    im_size = [80, 80]
+    crop_size = [64, 64]
+
+    crop_to_sq = transforms.CenterCrop([178, 178])
+    resize = transforms.Resize(im_size)
+    rotate = transforms.RandomRotation(degrees=30)
+    random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
+    flip_aug = transforms.RandomHorizontalFlip()
+    normalize = transforms.Normalize(mean=mu_data, std=std_data)
+    center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
+
+    transform_train = transforms.Compose([
+        crop_to_sq, resize,
+        rotate, random_crop,
+        flip_aug,
+        transforms.ToTensor(),
+        normalize
+    ])
+
+    transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
+                                         transforms.ToTensor(),
+                                         normalize])
+    transform_test_unnormalized = transforms.Compose([crop_to_sq, resize, center_crop,
+                                                      transforms.ToTensor()])
+    if partition == 'train':
+        assert normalize, "Unnormalized train transform not implemented."
+        return transform_train
+    elif partition == 'test':
+        if not normalize:
+            return transform_test_unnormalized
+        else:
+            return transform_test
+    else:
+        raise ValueError
 
 
 class CelebADataset(torch.utils.data.Dataset):

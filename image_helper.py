@@ -15,7 +15,7 @@ import random
 from torchvision import datasets, transforms
 import numpy as np
 from utils.dif_dataset import DiFDataset
-from utils.celeba_dataset import CelebADataset
+from utils.celeba_dataset import CelebADataset, get_transforms
 from utils.lfw_dataset import LFWDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
@@ -308,33 +308,9 @@ class ImageHelper(Helper):
         return True
 
     def load_celeba_data(self):
-        mu_data = [0.516785, 0.411116, 0.356696]
-        std_data = [0.298991, 0.264499, 0.256352]
-
-        im_size = [80, 80]
-        crop_size = [64, 64]
-
-        crop_to_sq = transforms.CenterCrop([178,178])
-        resize = transforms.Resize(im_size)
-        rotate = transforms.RandomRotation(degrees=30)
-        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
-        flip_aug = transforms.RandomHorizontalFlip()
-        normalize = transforms.Normalize(mean=mu_data, std=std_data)
-        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
-
-        transform_train = transforms.Compose([
-            crop_to_sq, resize,
-            rotate, random_crop,
-            flip_aug,
-            transforms.ToTensor(),
-            normalize
-        ])
-
-        transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
-                                             transforms.ToTensor(),
-                                             normalize])
-        transform_test_unnormalized = transforms.Compose([crop_to_sq, resize, center_crop,
-                                             transforms.ToTensor()])
+        transform_train = get_transforms('train')
+        transform_test = get_transforms('test')
+        transform_test_unnormalized = get_transforms('test', normalize=False)
 
         self.train_dataset = CelebADataset(
             self.params['attr_file'],
