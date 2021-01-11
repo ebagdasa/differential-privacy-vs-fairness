@@ -5,32 +5,22 @@ from text_helper import TextHelper
 
 logger = logging.getLogger('logger')
 
-import json
 from datetime import datetime
 import argparse
 from scipy import ndimage
-import torch
-import torchvision
-import os
-import torchvision.transforms as transforms
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
 from models.mobilenet import MobileNetV2
-from helper import Helper
 from image_helper import ImageHelper
 from models.densenet import DenseNet
 from models.simple import Net, FlexiNet, reseed, RegressionNet
 import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm as tqdm
-import time
-import random
 import yaml
 from utils.text_load import *
-from models.resnet import Res, PretrainedRes
 from utils.utils import dict_html, create_table, plot_confusion_matrix
 from inception import *
 
