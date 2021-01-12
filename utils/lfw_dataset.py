@@ -1,5 +1,6 @@
 import torch
 import torchvision
+from torchvision import transforms
 import pandas as pd
 import os
 import numpy as np
@@ -71,6 +72,43 @@ def get_anno_df(root_dir, partition, label_colname, label_threshold=None):
 
 def make_lfw_file_pattern(dirname):
     return osp.join(dirname, "*/*.jpg")
+
+
+def get_lfw_transforms(partition, normalize:bool=True):
+    mu_data = [0.463666, 0.390829, 0.339801]
+    std_data = [0.282721, 0.253934, 0.247486]
+    im_size = [80, 80]
+    crop_size = [64, 64]
+
+    resize = transforms.Resize(im_size)
+    rotate = transforms.RandomRotation(degrees=30)
+    random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
+    flip_aug = transforms.RandomHorizontalFlip()
+    normalize = transforms.Normalize(mean=mu_data, std=std_data)
+    center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
+
+    transform_train = transforms.Compose([resize,
+                                          rotate, random_crop,
+                                          flip_aug,
+                                          transforms.ToTensor(),
+                                          normalize])
+    transform_test = transforms.Compose([resize, center_crop,
+                                         transforms.ToTensor(),
+                                         normalize])
+
+    transform_test_unnormalized = transforms.Compose([resize, center_crop,
+                                         transforms.ToTensor(),
+                                         normalize])
+
+
+    if partition == 'train':
+        return transform_train
+    elif partition == 'test':
+        if not normalize:
+            return transform_test_unnormalized
+        return transform_test
+    else:
+        raise ValueError("Invalid partition {}".format(partition))
 
 
 class LFWDataset(torch.utils.data.Dataset):

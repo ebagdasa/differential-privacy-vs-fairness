@@ -15,8 +15,8 @@ import random
 from torchvision import datasets, transforms
 import numpy as np
 from utils.dif_dataset import DiFDataset
-from utils.celeba_dataset import CelebADataset, get_transforms
-from utils.lfw_dataset import LFWDataset
+from utils.celeba_dataset import CelebADataset, get_celeba_transforms
+from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from models.simple import SimpleNet
 from collections import OrderedDict
 
@@ -308,9 +308,9 @@ class ImageHelper(Helper):
         return True
 
     def load_celeba_data(self):
-        transform_train = get_transforms('train')
-        transform_test = get_transforms('test')
-        transform_test_unnormalized = get_transforms('test', normalize=False)
+        transform_train = get_celeba_transforms('train')
+        transform_test = get_celeba_transforms('test')
+        transform_test_unnormalized = get_celeba_transforms('test', normalize=False)
 
         self.train_dataset = CelebADataset(
             self.params['attr_file'],
@@ -361,26 +361,9 @@ class ImageHelper(Helper):
             num_workers=2)
 
     def load_lfw_data(self):
-        mu_data = [0.463666, 0.390829, 0.339801]
-        std_data = [0.282721, 0.253934, 0.247486]
-        im_size = [80, 80]
-        crop_size = [64, 64]
-
-        resize = transforms.Resize(im_size)
-        rotate = transforms.RandomRotation(degrees=30)
-        random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
-        flip_aug = transforms.RandomHorizontalFlip()
-        normalize = transforms.Normalize(mean=mu_data, std=std_data)
-        center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
-
-        transform_train = transforms.Compose([resize,
-                                              rotate, random_crop,
-                                              flip_aug,
-                                              transforms.ToTensor(),
-                                              normalize])
-        transform_test = transforms.Compose([resize, center_crop,
-                                             transforms.ToTensor(),
-                                             normalize])
+        transform_train = get_lfw_transforms('train')
+        transform_test = get_lfw_transforms('test')
+        transform_test_unnormalized = get_lfw_transforms(normalize=False)
 
         self.train_dataset = LFWDataset(
             self.params['root_dir'],
@@ -398,6 +381,16 @@ class ImageHelper(Helper):
             transform_test,
             partition='test')
 
+        self.unnormalized_test_dataset = LFWDataset(
+            self.params['root_dir'],
+            self.params['target_colname'],
+            self.params['attribute_colname'],
+            self.params.get('label_threshold'),
+            transform_test_unnormalized,
+            partition='test'
+        )
+
+
         self.labels = [0, 1]
         self.dataset_size = len(self.train_dataset)
 
@@ -412,6 +405,12 @@ class ImageHelper(Helper):
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
             num_workers=2)
+
+        self.unnormalized_test_loader = torch.utils.data.DataLoader(
+            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
+            shuffle=True,
+            num_workers=2
+        )
 
     def load_dif_data(self):
 
