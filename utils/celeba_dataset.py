@@ -30,7 +30,7 @@ def get_anno_df(attr_file, partition_file, partition, attribute_colname,
     return anno_subset
 
 
-def get_transforms(partition: str, normalize: bool = True):
+def get_celeba_transforms(partition: str, normalize: bool = True):
     mu_data = [0.516785, 0.411116, 0.356696]
     std_data = [0.298991, 0.264499, 0.256352]
 
