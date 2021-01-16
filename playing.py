@@ -15,6 +15,7 @@ from models.mobilenet import MobileNetV2
 from image_helper import ImageHelper
 from models.densenet import DenseNet
 from models.simple import Net, FlexiNet, reseed, RegressionNet
+from models.resnet import get_resnet_extractor, get_pretrained_resnet
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -576,9 +577,10 @@ if __name__ == '__main__':
         logger.info(f'Model size: {num_classes}')
         net = models.resnet18(num_classes=num_classes)
     elif helper.params['model'] == 'PretrainedRes':
-        net = models.resnet18(pretrained=True)
-        net.fc = nn.Linear(512, num_classes)
+        net = get_pretrained_resnet(num_classes, helper.params['freeze_pretrained_weights'])
         net = net.cuda()
+    elif helper.params['model'] == 'PretrainedResExtractor':
+        net = get_resnet_extractor(num_classes)
     elif helper.params['model'] == 'FlexiNet':
         net = FlexiNet(3, num_classes)
     elif helper.params['model'] == 'dif_inception':
@@ -602,12 +604,6 @@ if __name__ == '__main__':
         net = RegressionNet(output_dim=1)
     else:
         net = Net(output_dim=num_classes)
-
-    if helper.params['freeze_pretrained_weights']:
-        for parameter in net.parameters():
-            parameter.requires_grad = False
-        for parameter in net.fc.parameters():
-            parameter.requires_grad = True
 
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
