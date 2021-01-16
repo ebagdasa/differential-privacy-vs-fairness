@@ -38,7 +38,7 @@ def get_pretrained_resnet(num_classes, freeze_pretrained_weights:bool):
         # Set the last layer to be trainable
         for parameter in net.fc.parameters():
             parameter.requires_grad = True
-
+    return net
 
 
 class Res(SimpleNet):
