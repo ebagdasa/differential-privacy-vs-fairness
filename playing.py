@@ -578,10 +578,12 @@ if __name__ == '__main__':
         logger.info(f'Model size: {num_classes}')
         net = models.resnet18(num_classes=num_classes)
     elif helper.params['model'] == 'PretrainedRes':
-        net = get_pretrained_resnet(num_classes, helper.params['freeze_pretrained_weights'])
+        net = get_pretrained_resnet(num_classes,
+                                    helper.params['freeze_pretrained_weights'])
         net = net.cuda()
     elif helper.params['model'] == 'PretrainedResExtractor':
-        net = get_resnet_extractor(num_classes)
+        net = get_resnet_extractor(num_classes,
+                                   helper.params['freeze_pretrained_weights'])
     elif helper.params['model'] == 'FlexiNet':
         net = FlexiNet(3, num_classes)
     elif helper.params['model'] == 'dif_inception':
