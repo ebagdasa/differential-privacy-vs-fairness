@@ -108,14 +108,15 @@ def make_uid(params, number_of_entries_train:int=None):
     # fetch the value from the params file.
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}".format(
+    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}-{model}".format(
         dataset=params['dataset'],
         S=params.get('S'),
         z=params.get('z'),
         sigma=params.get('sigma'), alpha=params.get('alpha'),
         adaptive_sigma=params.get('adaptive_sigma', False),
         dp=str(params['dp']),
-        n=number_of_entries_train)
+        n=number_of_entries_train,
+        model=params['model'])
     if params.get('positive_class_keys') and params.get('negative_class_keys'):
         pos_keys = [str(i) for i in params['positive_class_keys']]
         neg_keys = [str(i) for i in params['negative_class_keys']]
