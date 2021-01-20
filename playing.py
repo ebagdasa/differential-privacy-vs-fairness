@@ -320,23 +320,12 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         saved_var = dict()
         for tensor_name, tensor in model.named_parameters():
             saved_var[tensor_name] = torch.zeros_like(tensor)
-        grad_vecs_sum_by_label = dict()
         grad_vecs = list()
-        count_vecs = defaultdict(int)
         for pos, j in enumerate(losses):
             j.backward(retain_graph=True)
 
             grad_vec = helper.get_grad_vec(model, device)
             grad_vecs.append(grad_vec)
-            # Note: by default, count_norm_cosine_per_batch is set to false in our params.
-            if helper.params.get('count_norm_cosine_per_batch', False):
-
-                label = labels[pos].item()
-                count_vecs[label] += 1
-                if grad_vecs_sum_by_label.get(label, False) is not False:
-                    grad_vecs_sum_by_label[label].add_(grad_vec)
-                else:
-                    grad_vecs_sum_by_label[label] = grad_vec
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
             if helper.params['dataset'] == 'dif':
@@ -378,7 +367,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
         optimizer.step()
 
-        if i > 0 and i % 20 == 0:
+        if i > 0 and i % 100 == 0:
             logger.info('[epoch %d, batch %5d] loss: %.3f' %
                         (epoch + 1, i + 1, batch_loss))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
