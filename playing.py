@@ -328,11 +328,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             grad_vecs.append(grad_vec)
 
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
-            if helper.params['dataset'] == 'dif':
-                label_norms[f'{labels[pos]}_{helper.label_skin_list[idxs[pos]]}'].append(
-                    total_norm)
-            else:
-                label_norms[int(labels[pos])].append(total_norm)
+            label_norms[int(labels[pos])].append(total_norm)
 
             for tensor_name, tensor in model.named_parameters():
                 if tensor.grad is not None:
