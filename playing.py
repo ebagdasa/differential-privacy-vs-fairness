@@ -47,15 +47,6 @@ layout = {'cosine': {
                              'cosine/8',
                              'cosine/9']]}}
 
-
-def check_tensor_finite(x: torch.Tensor):
-    if torch.isnan(x).any():
-        logger.warning("nan values detected in tensor.")
-    if torch.isinf(x).any():
-        logger.warning("inf values detected in tensor.")
-    return
-
-
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
     if len(lst_nonempty):
@@ -201,9 +192,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             inputs = inputs.to(device)
             labels = labels.to(device)
             outputs = net(inputs)
-
-            check_tensor_finite(labels)
-            check_tensor_finite(outputs)
 
             n_test += labels.size(0)
             if not mse:
@@ -360,8 +348,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             for tensor_name, tensor in model.named_parameters():
                 if tensor.grad is not None:
                     new_grad = tensor.grad
-                    check_tensor_finite(new_grad)
-                    check_tensor_finite(tensor)
                     # logger.info('new grad: ', new_grad)
                     saved_var[tensor_name].add_(new_grad)
             model.zero_grad()
@@ -389,7 +375,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
                         saved_var[tensor_name].add_(
                             torch.FloatTensor(tensor.grad.shape).normal_(0, sigma_dp))
                 tensor.grad = saved_var[tensor_name] / num_microbatches
-                check_tensor_finite(tensor.grad)
 
         optimizer.step()
 
