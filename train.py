@@ -663,26 +663,6 @@ if __name__ == '__main__':
                          mse=metric_name == 'mse',
                          labels_mapping=true_labels_to_binary_labels)
         unb_acc_dict = dict()
-        if helper.params['dataset'] == 'dif':
-            for name, value in sorted(helper.unbalanced_loaders.items(),
-                                      key=lambda x: x[0]):
-                unb_acc = test(net, epoch, name, value, vis=False)
-                plot(epoch, unb_acc, name=f'dif_unbalanced/{metric_name}')
-                unb_acc_dict[name] = unb_acc
-
-            unb_acc_list = list(unb_acc_dict.values())
-            logger.info(f'Accuracy on unbalanced set: {sorted(unb_acc_list)}')
-
-            plot(epoch, np.mean(unb_acc_list), f'accuracy_detailed/mean')
-            plot(epoch, np.min(unb_acc_list), f'accuracy_detailed/min')
-            plot(epoch, np.max(unb_acc_list), f'accuracy_detailed/max')
-            plot(epoch, np.var(unb_acc_list), f'accuracy_detailed/var')
-
-            fig = helper.plot_acc_list(unb_acc_dict, epoch, name='per_subgroup',
-                                       accuracy=test_loss)
-
-            torch.save(unb_acc_dict, f"{helper.folder_path}/acc_subgroup_{epoch}.pt")
-            writer.add_figure(figure=fig, global_step=epoch, tag='tag/subgroup')
 
         helper.save_model(net, epoch, test_loss)
     logger.info(
