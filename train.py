@@ -41,9 +41,8 @@ def get_number_of_entries_train(args, params):
     assert not (args.alpha
                 and (args.number_of_entries_train or params.get('number_of_entries'))
                 ), "Can only specify alpha or number_of_entries[_train], not both."
-    import ipdb;ipdb.set_trace()
     if args.alpha:  # Case: alpha is specified, use it.
-        num_entries_train = int(1 - args.alpha * params['dataset_size'])
+        num_entries_train = int(1 - args.alpha * params['ds_size'])
     elif args.number_of_entries_train:  # Case: command-line arg overrides params.
         num_entries_train = args.number_of_entries_train
         print("[INFO] overriding number of entries in parameters file; "
