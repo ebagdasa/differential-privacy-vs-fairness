@@ -38,11 +38,11 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 def get_number_of_entries_train(args, params):
     """Get the number of entries for the minority group in the training set."""
-    assert not (args.get('alpha')
+    assert not (args.alpha
                 and (args.number_of_entries_train or params.get('number_of_entries'))
                 ), "Can only specify alpha or number_of_entries[_train], not both."
     import ipdb;ipdb.set_trace()
-    if args.get('alpha'):  # Case: alpha is specified, use it.
+    if args.alpha:  # Case: alpha is specified, use it.
         num_entries_train = int(1 - args.alpha * params['dataset_size'])
     elif args.number_of_entries_train:  # Case: command-line arg overrides params.
         num_entries_train = args.number_of_entries_train
