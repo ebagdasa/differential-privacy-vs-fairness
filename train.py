@@ -37,7 +37,10 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 
 def get_number_of_entries_train(args, params):
+    assert not (args.get('alpha') and (args.number_of_entries_train or params.get('number_of_entries'))), "Can only specify alpha or number_of_entries[_train], not both."
     import ipdb;ipdb.set_trace()
+    if args.get('alpha'):
+        num_entries_train = int(1 - args.alpha * params['dataset_size'])
     # TODO(jpgard): use alpha here.
     if args.number_of_entries_train:
         num_entries_train = args.number_of_entries_train
