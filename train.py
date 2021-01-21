@@ -37,6 +37,8 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 
 def get_number_of_entries_train(args, params):
+    import ipdb;ipdb.set_trace()
+    # TODO(jpgard): use alpha here.
     if args.number_of_entries_train:
         num_entries_train = args.number_of_entries_train
         print("[INFO] overriding number of entries in parameters file; "
@@ -146,7 +148,8 @@ def load_data(helper, params):
         if helper.params.get('binary_mnist_task'):
             # Labels are assigned in order of index in this array; so minority_key has
             # label 0, majority_key has label 1.
-            classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
+            assert len(helper.params['key_to_drop']) == 1
+            classes_to_keep = (args.majority_key, helper.params['key_to_drop'][0])
             true_labels_to_binary_labels = {
                 label: i for i, label in enumerate(classes_to_keep)}
         elif helper.params.get('grouped_mnist_task'):
