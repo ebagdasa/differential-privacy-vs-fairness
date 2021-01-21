@@ -37,16 +37,18 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 
 def get_number_of_entries_train(args, params):
-    assert not (args.get('alpha') and (args.number_of_entries_train or params.get('number_of_entries'))), "Can only specify alpha or number_of_entries[_train], not both."
+    """Get the number of entries for the minority group in the training set."""
+    assert not (args.get('alpha')
+                and (args.number_of_entries_train or params.get('number_of_entries'))
+                ), "Can only specify alpha or number_of_entries[_train], not both."
     import ipdb;ipdb.set_trace()
-    if args.get('alpha'):
+    if args.get('alpha'):  # Case: alpha is specified, use it.
         num_entries_train = int(1 - args.alpha * params['dataset_size'])
-    # TODO(jpgard): use alpha here.
-    if args.number_of_entries_train:
+    elif args.number_of_entries_train:  # Case: command-line arg overrides params.
         num_entries_train = args.number_of_entries_train
         print("[INFO] overriding number of entries in parameters file; "
               "using %s entries" % num_entries_train)
-    else:
+    else:  # Case: use params value.
         num_entries_train = params['number_of_entries']
     return num_entries_train
 
@@ -184,6 +186,7 @@ def load_data(helper, params):
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
+        import ipdb;ipdb.set_trace()
     return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):
