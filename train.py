@@ -35,17 +35,139 @@ TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
 # attribute defined in the params.
 MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
-layout = {'cosine': {
-    'cosine': ['Multiline', ['cosine/0',
-                             'cosine/1',
-                             'cosine/2',
-                             'cosine/3',
-                             'cosine/4',
-                             'cosine/5',
-                             'cosine/6',
-                             'cosine/7',
-                             'cosine/8',
-                             'cosine/9']]}}
+
+def get_number_of_entries_train(args, params):
+    if args.number_of_entries_train:
+        num_entries_train = args.number_of_entries_train
+        print("[INFO] overriding number of entries in parameters file; "
+              "using %s entries" % num_entries_train)
+    else:
+        num_entries_train = params['number_of_entries']
+    return num_entries_train
+
+
+def get_optimizer(helper):
+    if helper.params['optimizer'] == 'SGD':
+        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
+                              weight_decay=decay)
+    elif helper.params['optimizer'] == 'Adam':
+        optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=decay)
+    else:
+        raise Exception('Specify `optimizer` in params.yaml.')
+    return optimizer
+
+
+def get_net(helper, num_classes):
+    if helper.params['model'] == 'densenet':
+        net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
+    elif helper.params['model'] == 'resnet':
+        logger.info(f'Model size: {num_classes}')
+        net = models.resnet18(num_classes=num_classes)
+    elif helper.params['model'] == 'PretrainedRes':
+        net = get_pretrained_resnet(num_classes,
+                                    helper.params['freeze_pretrained_weights'])
+        net = net.cuda()
+    elif helper.params['model'] == 'PretrainedResExtractor':
+        net = get_resnet_extractor(num_classes,
+                                   helper.params['freeze_pretrained_weights'])
+    elif helper.params['model'] == 'FlexiNet':
+        net = FlexiNet(3, num_classes)
+    elif helper.params['model'] == 'dif_inception':
+        net = inception_v3(pretrained=True, dif=True)
+        net.fc = nn.Linear(768, num_classes)
+        net.aux_logits = False
+    elif helper.params['model'] == 'inception':
+        net = inception_v3(pretrained=True)
+        net.fc = nn.Linear(2048, num_classes)
+        net.aux_logits = False
+        # model = torch.nn.DataParallel(model).cuda()
+    elif helper.params['model'] == 'mobilenet':
+        net = MobileNetV2(n_class=num_classes, input_size=64)
+    elif helper.params['model'] == 'word':
+        net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
+                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
+                       nlayers=helper.params['nlayers'],
+                       dropout=helper.params['dropout'],
+                       tie_weights=helper.params['tied'])
+    elif helper.params['model'] == 'regressionnet':
+        net = RegressionNet(output_dim=1)
+    else:
+        net = Net(output_dim=num_classes)
+    logger.info(
+        'Total number of params for model {}: {}'.format(
+            helper.params["model"],
+            sum(p.numel() for p in net.parameters() if p.requires_grad)
+        ))
+    return net
+
+
+def get_criterion(helper):
+    # For DP training, no loss reduction is used; otherwise, use default (mean) reduction.
+    if helper.params.get('criterion') == 'mse':  # Case: MSE objective.
+        print('[DEBUG] using MSE loss')
+        if dp:
+            criterion = nn.MSELoss(reduction='none')
+        else:
+            criterion = nn.MSELoss()
+    else:  # Case: not MSE; use cross-entropy objective.
+        if dp:
+            criterion = nn.CrossEntropyLoss(reduction='none')
+        else:
+            criterion = nn.CrossEntropyLoss()
+    return criterion
+
+def load_data(helper, params):
+    classes_to_keep = None
+    true_labels_to_binary_labels = None
+    if helper.params['dataset'] == 'inat':
+        helper.load_inat_data()
+        helper.balance_loaders()
+    elif helper.params['dataset'] == 'word':
+        helper.load_data()
+    elif helper.params['dataset'] == 'dif':
+        helper.load_dif_data()
+        helper.get_unbalanced_faces()
+    elif helper.params['dataset'] == 'celeba':
+        helper.load_celeba_data()
+    elif helper.params['dataset'] == 'lfw':
+        helper.load_lfw_data()
+    else:
+        if helper.params.get('binary_mnist_task'):
+            # Labels are assigned in order of index in this array; so minority_key has
+            # label 0, majority_key has label 1.
+            classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
+            true_labels_to_binary_labels = {
+                label: i for i, label in enumerate(classes_to_keep)}
+        elif helper.params.get('grouped_mnist_task'):
+            classes_to_keep = helper.params['positive_class_keys'] + \
+                              helper.params['negative_class_keys']
+            true_labels_to_binary_labels = {
+                label: int(label in helper.params['positive_class_keys'])
+                for label in classes_to_keep}
+        else:
+            raise ValueError
+        helper.load_cifar_or_mnist_data(dataset=params['dataset'],
+                                        classes_to_keep=classes_to_keep)
+        logger.info('before loader')
+        helper.create_loaders()
+        logger.info('after loader')
+
+        keys_to_drop = params.get('key_to_drop')
+        if not isinstance(keys_to_drop, list):
+            keys_to_drop = list(keys_to_drop)
+        # Create a unique DataLoader for each class
+        helper.sampler_per_class()
+        logger.info('after sampler')
+        number_of_entries_train = get_number_of_entries_train(args, params)
+        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
+                                         keys_to_drop=keys_to_drop,
+                                         number_of_entries=number_of_entries_train)
+        logger.info('after sampler expo')
+        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
+                                              number_of_entries_test=params[
+                                                  'number_of_entries_test'])
+        logger.info('after sampler test')
+    return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):
     lst_nonempty = [x for x in lst if x.numel() > 0]
@@ -414,9 +536,11 @@ def train(trainloader, model, optimizer, epoch):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
-    # parser.add_argument('--name', dest='name', required=True)
-    parser.add_argument("--majority_key", default=None, type=int,
+    parser.add_argument("--majority_key", default=3, type=int,
                         help="Optionally specify the majority group key (e.g. '1').")
+    parser.add_argument("--alpha", default=None, type=float,
+                        help="Fractoin of samples to take from majority class. Minority "
+                             "class will be downsampled if necessary.")
     parser.add_argument("--number_of_entries_train", default=None, type=int,
                         help="Optional number of minority class entries/size to "
                              "downsample to; if provided, this value overrides value in "
@@ -440,7 +564,6 @@ if __name__ == '__main__':
     name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
 
     writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
-    writer.add_custom_scalars(layout)
 
     if params.get('model', False) == 'word':
         helper = TextHelper(current_time=d, params=params, name='text')
@@ -472,111 +595,19 @@ if __name__ == '__main__':
         sigma = helper.params.get('sigma')
     alpha = helper.params.get('alpha')
     adaptive_sigma = helper.params.get('adaptive_sigma', False)
-    logger.debug("sigma = %s" % sigma)
-    logger.debug("alpha = %s" % alpha)
-    logger.debug("adaptive_sigma = %s" % adaptive_sigma)
     dp = helper.params['dp']
     mu = helper.params['mu']
-    logger.info(f'DP: {dp}')
 
-    logger.info(batch_size)
-    logger.info(lr)
-    logger.info(momentum)
     reseed(5)
-    classes_to_keep = None
-    true_labels_to_binary_labels = None
-    if helper.params['dataset'] == 'inat':
-        helper.load_inat_data()
-        helper.balance_loaders()
-    elif helper.params['dataset'] == 'word':
-        helper.load_data()
-    elif helper.params['dataset'] == 'dif':
-        helper.load_dif_data()
-        helper.get_unbalanced_faces()
-    elif helper.params['dataset'] == 'celeba':
-        helper.load_celeba_data()
-    elif helper.params['dataset'] == 'lfw':
-        helper.load_lfw_data()
-    else:
-        if helper.params.get('binary_mnist_task'):
-            # Labels are assigned in order of index in this array; so minority_key has
-            # label 0, majority_key has label 1.
-            classes_to_keep = (args.majority_key, helper.params['key_to_drop'])
-            true_labels_to_binary_labels = {
-                label: i for i, label in enumerate(classes_to_keep)}
-        elif helper.params.get('grouped_mnist_task'):
-            classes_to_keep = helper.params['positive_class_keys'] + \
-                              helper.params['negative_class_keys']
-            true_labels_to_binary_labels = {
-                label: int(label in helper.params['positive_class_keys'])
-                for label in classes_to_keep}
-        else:
-            raise ValueError
-        helper.load_cifar_data(dataset=params['dataset'], classes_to_keep=classes_to_keep)
-        logger.info('before loader')
-        helper.create_loaders()
-        logger.info('after loader')
 
-        keys_to_drop = params.get('key_to_drop')
-        if not isinstance(keys_to_drop, list):
-            keys_to_drop = list(keys_to_drop)
-        # Create a unique DataLoader for each class
-        helper.sampler_per_class()
-        logger.info('after sampler')
-        if args.number_of_entries_train:
-            number_of_entries_train = args.number_of_entries_train
-            print("[INFO] overriding number of entries in parameters file; "
-                  "using %s entries" % number_of_entries_train)
-        else:
-            number_of_entries_train = params['number_of_entries']
-        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
-                                         keys_to_drop=keys_to_drop,
-                                         number_of_entries=number_of_entries_train)
-        logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
-                                              number_of_entries_test=params[
-                                                  'number_of_entries_test'])
-        logger.info('after sampler test')
+    true_labels_to_binary_labels, classes_to_keep = load_data(helper, params)
+    num_classes = helper.get_num_classes(classes_to_keep)
+
     if dp and sigma != 0:
         helper.compute_rdp()
-    num_classes = helper.get_num_classes(classes_to_keep)
     print('[DEBUG] num_classes is %s' % num_classes)
     reseed(5)
-    if helper.params['model'] == 'densenet':
-        net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
-    elif helper.params['model'] == 'resnet':
-        logger.info(f'Model size: {num_classes}')
-        net = models.resnet18(num_classes=num_classes)
-    elif helper.params['model'] == 'PretrainedRes':
-        net = get_pretrained_resnet(num_classes,
-                                    helper.params['freeze_pretrained_weights'])
-        net = net.cuda()
-    elif helper.params['model'] == 'PretrainedResExtractor':
-        net = get_resnet_extractor(num_classes,
-                                   helper.params['freeze_pretrained_weights'])
-    elif helper.params['model'] == 'FlexiNet':
-        net = FlexiNet(3, num_classes)
-    elif helper.params['model'] == 'dif_inception':
-        net = inception_v3(pretrained=True, dif=True)
-        net.fc = nn.Linear(768, num_classes)
-        net.aux_logits = False
-    elif helper.params['model'] == 'inception':
-        net = inception_v3(pretrained=True)
-        net.fc = nn.Linear(2048, num_classes)
-        net.aux_logits = False
-        # model = torch.nn.DataParallel(model).cuda()
-    elif helper.params['model'] == 'mobilenet':
-        net = MobileNetV2(n_class=num_classes, input_size=64)
-    elif helper.params['model'] == 'word':
-        net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
-                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
-                       nlayers=helper.params['nlayers'],
-                       dropout=helper.params['dropout'],
-                       tie_weights=helper.params['tied'])
-    elif helper.params['model'] == 'regressionnet':
-        net = RegressionNet(output_dim=1)
-    else:
-        net = Net(output_dim=num_classes)
+    net = get_net(helper, num_classes)
 
     if helper.params.get('multi_gpu', False):
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -596,37 +627,14 @@ if __name__ == '__main__':
     else:
         helper.start_epoch = 1
 
-    logger.info(
-        'Total number of params for model {}: {}'.format(
-            helper.params["model"],
-            sum(p.numel() for p in net.parameters() if p.requires_grad)
-        ))
-
-    # For DP training, no loss reduction is used; otherwise, use default (mean) reduction.
-    if helper.params.get('criterion') == 'mse':  # Case: MSE objective.
-        print('[DEBUG] using MSE loss')
-        if dp:
-            criterion = nn.MSELoss(reduction='none')
-        else:
-            criterion = nn.MSELoss()
-    else:  # Case: not MSE; use cross-entropy objective.
-        if dp:
-            criterion = nn.CrossEntropyLoss(reduction='none')
-        else:
-            criterion = nn.CrossEntropyLoss()
+    criterion = get_criterion(helper)
 
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in ('lfw', 'celeba'):
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
         compute_channelwise_mean(helper.train_loader)
 
-    if helper.params['optimizer'] == 'SGD':
-        optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
-                              weight_decay=decay)
-    elif helper.params['optimizer'] == 'Adam':
-        optimizer = optim.Adam(net.parameters(), lr=lr, weight_decay=decay)
-    else:
-        raise Exception('Specify `optimizer` in params.yaml.')
+    optimizer = get_optimizer(helper)
 
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer,
                                                      milestones=[0.5 * epochs,
