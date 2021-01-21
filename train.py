@@ -46,6 +46,17 @@ def get_number_of_entries_train(args, params):
     return num_entries_train
 
 
+def get_helper(params, d, name):
+    if params.get('model', False) == 'word':
+        helper = TextHelper(current_time=d, params=params, name='text')
+
+        helper.corpus = torch.load(helper.params['corpus'])
+        logger.info(helper.corpus.train.shape)
+    else:
+        helper = ImageHelper(current_time=d, params=params, name=name)
+    return helper
+
+
 def get_optimizer(helper):
     if helper.params['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
@@ -565,13 +576,7 @@ if __name__ == '__main__':
 
     writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
 
-    if params.get('model', False) == 'word':
-        helper = TextHelper(current_time=d, params=params, name='text')
-
-        helper.corpus = torch.load(helper.params['corpus'])
-        logger.info(helper.corpus.train.shape)
-    else:
-        helper = ImageHelper(current_time=d, params=params, name=name)
+    helper = get_helper(params, d, name)
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
