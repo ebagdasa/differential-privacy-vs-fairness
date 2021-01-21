@@ -122,7 +122,7 @@ class ImageHelper(Helper):
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True)
 
-    def load_cifar_data(self, dataset, classes_to_keep=None):
+    def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None):
         """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
