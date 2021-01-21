@@ -18,7 +18,6 @@ binary_mnist_task: True
 key_to_drop: [8,]  # This will also be used as the 'minority group' in binary tasks.
 positive_class_keys: [3, ]  # These keys are grouped into the class with label 1.
 negative_class_keys: [8,]  # These keys are grouped into the class with label 0.
-#number_of_entries: 500   # This is the sample size of the minority keys specified in key_to_drop.
 number_of_entries_test: 1000
 optimizer: SGD
 
