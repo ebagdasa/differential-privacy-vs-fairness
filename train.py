@@ -236,9 +236,11 @@ def add_pos_and_neg_summary_images(data_loader, max_images=64):
     return
 
 
-def make_uid(params, number_of_entries_train:int=None):
+def make_uid(params, args):
     # If number_of_entries_train is provided, it overrides the params file. Otherwise,
     # fetch the value from the params file.
+    alpha = args.alpha
+    number_of_entries_train = args.number_of_entries_train
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
     uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}-{model}".format(
@@ -250,6 +252,8 @@ def make_uid(params, number_of_entries_train:int=None):
         dp=str(params['dp']),
         n=number_of_entries_train,
         model=params['model'])
+    if alpha is not None:
+        uid += '-alpha' + str(alpha)
     if params.get('positive_class_keys') and params.get('negative_class_keys'):
         pos_keys = [str(i) for i in params['positive_class_keys']]
         neg_keys = [str(i) for i in params['negative_class_keys']]
@@ -581,7 +585,7 @@ if __name__ == '__main__':
         print("[INFO] overriding train_attribute_subset with value from command: {}"
               .format(args.train_attribute_subset))
         params['train_attribute_subset'] = args.train_attribute_subset
-    name = make_uid(params, number_of_entries_train=args.number_of_entries_train)
+    name = make_uid(params, args)
 
     writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
 
