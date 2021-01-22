@@ -74,8 +74,7 @@ class ImageHelper(Helper):
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
     def sampler_exponential_class(self, mu=1, total_number=40000,
-                                  keys_to_drop:list=False, number_of_entries=False,
-                                  alpha=None):
+                                  keys_to_drop:list=False, number_of_entries=False):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.train_dataset):
