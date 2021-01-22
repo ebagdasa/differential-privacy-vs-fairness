@@ -4,11 +4,9 @@ num_microbatches: 256
 lr: 0.01
 momentum: 0.5
 decay: 0
-#S: 1
-#z: 0.8
 dp: False
-epochs: 60
-save_on_epochs: [10, 50]
+epochs: 120
+save_on_epochs: [10, 50, 100, 110]
 
 mu: 1.0
 # When alpha is very small, ds_size will effectively be
@@ -26,7 +24,7 @@ optimizer: SGD
 save_model: False
 dataset: mnist
 model: net
-densenet_depth: 100
+#densenet_depth: 100
 scheduler: False
 
 count_norm_cosine_per_batch: False
