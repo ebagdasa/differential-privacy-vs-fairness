@@ -33,16 +33,17 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None):
     :return:
     """
     if alpha is not None:
+        assert alpha >= 0.5, "Expect alpha >= 0.5."
         majority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 1]
         minority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 0]
-        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys))
-        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys))
-        n_sub = min(len(majority_keys), len(minority_keys))
+        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
+        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
+        n_maj = len(majority_idxs)
+        n_min = int((1 - alpha) * float(n_maj) / alpha)
         # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
-        majority_idx_sample = np.random.choice(majority_idxs, size=int(n_sub*alpha), replace=False)
-        minority_idx_sample = np.random.choice(minority_idxs, size=int(n_sub*(1-alpha)), replace=False)
+        majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
+        minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
         idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
-        import ipdb;ipdb.set_trace()
         return torch.utils.data.Subset(dataset, idx_sample)
     else:
         return dataset
@@ -200,7 +201,8 @@ class ImageHelper(Helper):
                 self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
                                                             alpha,
                                                             labels_mapping)
-                print("[DEBUG] train data after filtering size: %s" % len(self.train_dataset))
+                print("[DEBUG] train data size after filtering"
+                      "/alpha-balancing size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
                 test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
                 self.test_dataset.targets = self.test_dataset.targets[test_idx].to(dtype=torch.float32)
