@@ -173,8 +173,8 @@ def load_data(helper, params):
         helper.create_loaders()
         logger.info('after loader')
 
-        keys_to_drop = params.get('key_to_drop', False)
-        if (keys_to_drop) and (not isinstance(keys_to_drop, list)):
+        keys_to_drop = params.get('key_to_drop', list())
+        if not isinstance(keys_to_drop, list):
             keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
