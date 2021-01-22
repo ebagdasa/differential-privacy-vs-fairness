@@ -43,7 +43,7 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
             # Check that fixed training set size is less than or equal to full data size.
             assert n_train <= len(majority_idxs) + len(minority_idxs)
             n_maj = int(alpha * n_train)
-            n_min = int((1 - alpha) * n_train)
+            n_min = n_train - n_maj
         else:
             n_maj = len(majority_idxs)
             n_min = int((1 - alpha) * float(n_maj) / alpha)
@@ -54,6 +54,10 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
         dataset.data = dataset.data[idx_sample]
         dataset.targets = dataset.targets[idx_sample]
         assert len(dataset) == (n_min + n_maj), "Sanity check for dataset subsetting."
+        assert abs(
+            float(len(minority_idx_sample)) / len(dataset)
+            - (1 - alpha)) < 0.001, \
+            "Sanity check for minority size within 0.001 of (1-alpha)."
     return dataset
 
 

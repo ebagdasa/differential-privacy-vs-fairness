@@ -10,16 +10,15 @@ save_on_epochs: [10, 50, 100, 110]
 
 mu: 1.0
 # When alpha is very small, ds_size will effectively be
-# the size of the majority group in MNIST (~6000). With classes
-# 3 and 8, it needs to be slightly smaller.
-ds_size: 5790
+# the size of the majority group in MNIST (~6000).
+ds_size: 5800
 
 binary_mnist_task: True
 
 #key_to_drop: [8,]  # This will also be used as the 'minority group' in binary tasks.
 positive_class_keys: [3, ]  # These keys are grouped into the class with label 1.
 negative_class_keys: [8,]  # These keys are grouped into the class with label 0.
-fixed_n_train: 5790
+fixed_n_train: 5800
 number_of_entries_test: 1000
 optimizer: SGD
 
