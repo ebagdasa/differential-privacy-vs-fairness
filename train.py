@@ -562,7 +562,7 @@ def train(trainloader, model, optimizer, epoch):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PPDL')
     parser.add_argument('--params', dest='params', default='utils/params.yaml')
-    parser.add_argument("--majority_key", default=3, type=int,
+    parser.add_argument("--majority_key", default=None, type=int,
                         help="Optionally specify the majority group key (e.g. '1').")
     parser.add_argument("--alpha", default=None, type=float,
                         help="Fractoin of samples to take from majority class. Minority "
