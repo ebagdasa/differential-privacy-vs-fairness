@@ -367,7 +367,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
-                binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+                labels_type = torch.float32 if isinstance(criterion, torch.nn.MSELoss) else torch.long
+                binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels, labels_type)
 
                 running_metric_total += compute_mse(outputs, binarized_labels_tensor)
                 main_test_metric = running_metric_total / n_test
@@ -423,15 +424,16 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     return main_test_metric
 
 
-def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
+def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list,
+                           out_type=torch.float32):
     """
     Create a labels tensor where the ith entry is 1 if labels[i] is in pos_labels,
     and zero otherwise.
     """
-    binary_labels = torch.zeros_like(labels, dtype=torch.float32)
+    binary_labels = torch.zeros_like(labels, dtype=out_type)
     for l in pos_labels:
         is_l = (labels == l)
-        binary_labels += is_l.type(torch.float32)
+        binary_labels += is_l.type(out_type)
     assert torch.max(binary_labels) <= 1., "Sanity check on binarized grouped labels."
     return binary_labels
 
@@ -457,9 +459,11 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         outputs = model(inputs)
 
         if labels_mapping:
-            labels = labels.float()
             pos_labels = [k for k, v in labels_mapping.items() if v == 1]
-            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+            labels_type = torch.float32 if isinstance(criterion,
+                                                      torch.nn.MSELoss) else torch.long
+
+            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels, labels_type)
             loss = criterion(outputs, binarized_labels_tensor)
         else:
             loss = criterion(outputs, labels)
@@ -553,9 +557,10 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
         outputs = model(inputs)
 
         if labels_mapping:
-            labels = labels.float()
             pos_labels = [k for k, v in labels_mapping.items() if v == 1]
-            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+            labels_type = torch.float32 if isinstance(criterion,
+                                                      torch.nn.MSELoss) else torch.long
+            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels, labels_type)
             loss = criterion(outputs, binarized_labels_tensor)
         else:
             loss = criterion(outputs, labels)
