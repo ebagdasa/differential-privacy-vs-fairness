@@ -182,8 +182,7 @@ def load_data(helper, params):
         number_of_entries_train = get_number_of_entries_train(args, params)
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
                                          keys_to_drop=keys_to_drop,
-                                         number_of_entries=number_of_entries_train,
-                                         alpha=args.alpha)
+                                         number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
         helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
                                               number_of_entries_test=params[
