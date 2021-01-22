@@ -344,12 +344,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             if labels_mapping:
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
-                binarized_labels_tensor = binarize_labels_tensor(
-                    labels, pos_labels, labels_type)
+                labels = binarize_labels_tensor(labels, pos_labels, labels_type)
 
             n_test += labels.size(0)
-            if not mse:
 
+            if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
                 correct_labels.extend([x.item() for x in labels])
@@ -373,8 +372,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                         import ipdb;ipdb.set_trace()
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
-
-                running_metric_total += compute_mse(outputs, binarized_labels_tensor)
+                running_metric_total += compute_mse(outputs, labels)
                 main_test_metric = running_metric_total / n_test
 
     if vis:
