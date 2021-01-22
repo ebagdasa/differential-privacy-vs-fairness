@@ -11,7 +11,9 @@ epochs: 60
 save_on_epochs: [10, 50]
 
 mu: 1.0
-ds_size: 60000
+# When alpha is very small, ds_size will effectively be
+# the size of the majority group in MNIST (~6000).
+ds_size: 5800
 
 binary_mnist_task: True
 
