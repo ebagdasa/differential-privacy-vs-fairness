@@ -44,9 +44,11 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None):
         majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
         minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
         idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
-        return torch.utils.data.Subset(dataset, idx_sample)
-    else:
-        return dataset
+        dataset.data = dataset.data[idx_sample]
+        dataset.targets = dataset.targets[idx_sample]
+        assert len(dataset) == (n_min + n_maj), "Sanity check for dataset subsetting."
+    return dataset
+
 
 class ImageHelper(Helper):
 
