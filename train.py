@@ -424,6 +424,10 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
 
 
 def binarize_labels_tensor(labels: torch.Tensor, pos_labels: list):
+    """
+    Create a labels tensor where the ith entry is 1 if labels[i] is in pos_labels,
+    and zero otherwise.
+    """
     binary_labels = torch.zeros_like(labels, dtype=torch.float32)
     for l in pos_labels:
         is_l = (labels == l)
@@ -523,7 +527,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         plot(epoch, torch.mean(torch.stack(norms)), f'norms/class_{pos}')
 
 
-def train(trainloader, model, optimizer, epoch):
+def train(trainloader, model, optimizer, epoch, labels_mapping=None):
     model.train()
     running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
@@ -547,7 +551,15 @@ def train(trainloader, model, optimizer, epoch):
 
         # forward + backward + optimize
         outputs = model(inputs)
-        loss = criterion(outputs, labels)
+
+        if labels_mapping:
+            labels = labels.float()
+            pos_labels = [k for k, v in labels_mapping.items() if v == 1]
+            binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels)
+            loss = criterion(outputs, binarized_labels_tensor)
+        else:
+            loss = criterion(outputs, labels)
+
         loss.backward()
         optimizer.step()
         # logger.info statistics
@@ -674,9 +686,8 @@ if __name__ == '__main__':
                      labels_mapping=true_labels_to_binary_labels,
                      sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
         else:
-            assert true_labels_to_binary_labels is None, \
-                "Label binarization is not implemented for non-DP training."
-            train(helper.train_loader, net, optimizer, epoch)
+            train(helper.train_loader, net, optimizer, epoch,
+                  labels_mapping=true_labels_to_binary_labels)
         if helper.params['scheduler']:
             scheduler.step()
         test_loss = test(net, epoch, name, helper.test_loader,
