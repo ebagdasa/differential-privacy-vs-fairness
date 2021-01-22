@@ -256,6 +256,8 @@ def make_uid(params, args):
         model=params['model'])
     if alpha is not None:
         uid += '-alpha' + str(alpha)
+    if params.get('fixed_n_train'):
+        uid += 'ntr' + str(params.get('fixed_n_train'))
     if params.get('positive_class_keys') and params.get('negative_class_keys'):
         pos_keys = [str(i) for i in params['positive_class_keys']]
         neg_keys = [str(i) for i in params['negative_class_keys']]
