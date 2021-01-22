@@ -38,12 +38,7 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
 
 def get_number_of_entries_train(args, params):
     """Get the number of entries for the minority group in the training set."""
-    assert not (args.alpha
-                and (args.number_of_entries_train or params.get('number_of_entries'))
-                ), "Can only specify alpha or number_of_entries[_train], not both."
-    if args.alpha:  # Case: alpha is specified, use it.
-        num_entries_train = int(1 - args.alpha * params['ds_size'])
-    elif args.number_of_entries_train:  # Case: command-line arg overrides params.
+    if args.number_of_entries_train:  # Case: command-line arg overrides params.
         num_entries_train = args.number_of_entries_train
         print("[INFO] overriding number of entries in parameters file; "
               "using %s entries" % num_entries_train)
@@ -165,7 +160,9 @@ def load_data(helper, params):
         else:
             raise ValueError
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
-                                        classes_to_keep=classes_to_keep)
+                                        classes_to_keep=classes_to_keep,
+                                        labels_mapping=true_labels_to_binary_labels,
+                                        alpha=args.alpha)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
@@ -179,13 +176,13 @@ def load_data(helper, params):
         number_of_entries_train = get_number_of_entries_train(args, params)
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
                                          keys_to_drop=keys_to_drop,
-                                         number_of_entries=number_of_entries_train)
+                                         number_of_entries=number_of_entries_train,
+                                         alpha=args.alpha)
         logger.info('after sampler expo')
         helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
-        import ipdb;ipdb.set_trace()
     return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):

@@ -23,6 +23,30 @@ from collections import OrderedDict
 POISONED_PARTICIPANT_POS = 0
 
 
+def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None):
+    """
+
+    :param dataset: torch dataset.
+    :param alpha: float; proportion of samples to keep in the majority group. Majority
+        group is defined as the group with label 1.
+    :param labels_mapping: dict mapping true labels to binary labels.
+    :return:
+    """
+    if alpha is not None:
+        majority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 1]
+        minority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 0]
+        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys))
+        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys))
+        n_sub = min(len(majority_keys), len(minority_keys))
+        # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
+        majority_idx_sample = np.random.choice(majority_idxs, size=int(n_sub*alpha), replace=False)
+        minority_idx_sample = np.random.choice(minority_idxs, size=int(n_sub*(1-alpha)), replace=False)
+        idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
+        import ipdb;ipdb.set_trace()
+        return torch.utils.data.Subset(dataset, idx_sample)
+    else:
+        return dataset
+
 class ImageHelper(Helper):
 
     def poison(self):
@@ -40,7 +64,8 @@ class ImageHelper(Helper):
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
     def sampler_exponential_class(self, mu=1, total_number=40000,
-                                  keys_to_drop:list =False, number_of_entries=False):
+                                  keys_to_drop:list=False, number_of_entries=False,
+                                  alpha=None):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.train_dataset):
@@ -61,30 +86,37 @@ class ImageHelper(Helper):
             proportion = 1
         else:
             if total_number / unbalanced_sum > 1:
-                raise ValueError(
-                    f"Expected at least {total_number} elements, after sampling left only: {unbalanced_sum}.")
+                raise ValueError("Expected at least "
+                                 "{} elements, after sampling left only: {}.".format(
+                    total_number, unbalanced_sum))
             proportion = total_number / unbalanced_sum
         logger.info(sum)
         ds_indices = list()
         subset_lengths = list()
         sum = 0
+        # Build the list of indices for the dataset
         for key, indices in per_class_list.items():
             random.shuffle(indices)
             if key and key not in keys_to_drop:
+                # Case: this is a 'normal' class; keep all its instances.
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
+                # Case: this is a key_to_trop; keep number_of_entries instances.
                 subset_len = number_of_entries
             else:
+                # This is a special case, keep (mu ** key) * proportion instances.
                 subset_len = int(len(indices) * (mu ** key) * proportion)
             sum += subset_len
             subset_lengths.append(subset_len)
             logger.info(f'Key: {key}, subset len: {subset_len} original class len: {len(indices)}')
             ds_indices.extend(indices[:subset_len])
-        logger.info(sum)
         self.dataset_size = sum
         logger.info(f'Imbalance: {max(subset_lengths) / min(subset_lengths)}')
-        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, batch_size=self.params[
-            'batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices), drop_last=True)
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset,
+            batch_size=self.params['batch_size'],
+            sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
+            drop_last=True)
 
     def sampler_exponential_class_test(self, mu=1, keys_to_drop:list=False,
                                        number_of_entries_test=False):
@@ -122,7 +154,9 @@ class ImageHelper(Helper):
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True)
 
-    def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None):
+    def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None,
+                                 labels_mapping:dict=None,
+                                 alpha:float=None):
         """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
@@ -163,6 +197,9 @@ class ImageHelper(Helper):
                 train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
                 self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
+                self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
+                                                            alpha,
+                                                            labels_mapping)
                 print("[DEBUG] train data after filtering size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
                 test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
