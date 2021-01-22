@@ -42,8 +42,10 @@ def get_number_of_entries_train(args, params):
         num_entries_train = args.number_of_entries_train
         print("[INFO] overriding number of entries in parameters file; "
               "using %s entries" % num_entries_train)
-    else:  # Case: use params value.
-        num_entries_train = params['number_of_entries']
+    # Case: use params value, defaulting to False (the null
+    # value in helper.sampler...() functions.
+    else:
+        num_entries_train = params.get('number_of_entries', False)
     return num_entries_train
 
 
