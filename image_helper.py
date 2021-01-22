@@ -104,7 +104,7 @@ class ImageHelper(Helper):
                 # Case: this is a 'normal' class; keep all its instances.
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
-                # Case: this is a key_to_trop; keep number_of_entries instances.
+                # Case: this is a key_to_drop; keep number_of_entries instances.
                 subset_len = number_of_entries
             else:
                 # This is a special case, keep (mu ** key) * proportion instances.
