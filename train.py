@@ -146,16 +146,20 @@ def load_data(helper, params):
     elif helper.params['dataset'] == 'lfw':
         helper.load_lfw_data()
     else:
+        # First, define classes_to_keep.
+        # Labels are assigned in order of index in this array; so minority_key has
+        # label 0, majority_key has label 1.
+        if args.majority_key:  # Case: Majority key command-line arg overrides params
+            classes_to_keep = (args.majority_key, helper.params['minority_key'][0])
+        else:  # Case: Use the label groups defined in params.
+            classes_to_keep = helper.params['positive_class_keys'] + \
+                              helper.params['negative_class_keys']
+
+        # Define the labels mapping.
         if helper.params.get('binary_mnist_task'):
-            # Labels are assigned in order of index in this array; so minority_key has
-            # label 0, majority_key has label 1.
-            assert len(helper.params['key_to_drop']) == 1
-            classes_to_keep = (args.majority_key, helper.params['key_to_drop'][0])
             true_labels_to_binary_labels = {
                 label: i for i, label in enumerate(classes_to_keep)}
         elif helper.params.get('grouped_mnist_task'):
-            classes_to_keep = helper.params['positive_class_keys'] + \
-                              helper.params['negative_class_keys']
             true_labels_to_binary_labels = {
                 label: int(label in helper.params['positive_class_keys'])
                 for label in classes_to_keep}
