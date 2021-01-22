@@ -23,7 +23,8 @@ from collections import OrderedDict
 POISONED_PARTICIPANT_POS = 0
 
 
-def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None):
+def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
+                           n_train:int=None):
     """
 
     :param dataset: torch dataset.
@@ -38,8 +39,14 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None):
         minority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 0]
         majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
         minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
-        n_maj = len(majority_idxs)
-        n_min = int((1 - alpha) * float(n_maj) / alpha)
+        if n_train:
+            # Check that fixed training set size is less than or equal to full data size.
+            assert n_train <= len(majority_idxs) + len(minority_idxs)
+            n_maj = int(alpha * n_train)
+            n_min = int((1 - alpha) * n_train)
+        else:
+            n_maj = len(majority_idxs)
+            n_min = int((1 - alpha) * float(n_maj) / alpha)
         # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
         majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
         minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
@@ -200,9 +207,11 @@ class ImageHelper(Helper):
                 train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
                 self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
+                fixed_n_train = self.params.get('fixed_n_train')
                 self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
                                                             alpha,
-                                                            labels_mapping)
+                                                            labels_mapping,
+                                                            fixed_n_train)
                 print("[DEBUG] train data size after filtering"
                       "/alpha-balancing size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
