@@ -174,7 +174,8 @@ class ImageHelper(Helper):
             print("[INFO] initializing test dataset")
             self.test_dataset = AlphaMNISTDataset(
                 alpha=None, classes_to_keep=classes_to_keep,
-                ficed_n_train=None,
+                fixed_n_train=None, minority_group_keys=minority_group_keys,
+                labels_mapping=labels_mapping,
                 root='../data', train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))]))
