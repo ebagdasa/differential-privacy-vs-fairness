@@ -64,6 +64,9 @@ def apply_alpha_to_dataset(dataset, minority_group_keys:list=None,
     return dataset
 
 
+def is_valid_key(key, keys_to_drop) -> bool:
+    return key and ((keys_to_drop is None) or (key not in keys_to_drop))
+
 class ImageHelper(Helper):
 
     def poison(self):
@@ -91,7 +94,7 @@ class ImageHelper(Helper):
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         unbalanced_sum = 0
         for key, indices in per_class_list.items():
-            if key and ((keys_to_drop is None) or (key not in keys_to_drop)):
+            if is_valid_key(key, keys_to_drop):
                 unbalanced_sum += len(indices)
             elif key and key in keys_to_drop:
                 unbalanced_sum += number_of_entries
@@ -113,7 +116,7 @@ class ImageHelper(Helper):
         # Build the list of indices for the dataset
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            if key and ((keys_to_drop is None) or (key not in keys_to_drop)):
+            if is_valid_key(key, keys_to_drop):
                 # Case: this is a 'normal' class; keep all its instances.
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
@@ -134,8 +137,8 @@ class ImageHelper(Helper):
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True)
 
-    def sampler_exponential_class_test(self, mu=1, keys_to_drop:list=False,
-                                       number_of_entries_test=False):
+    def sampler_exponential_class_test(self, mu=1, keys_to_drop: list = None,
+                                       number_of_entries_test=None):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.test_dataset):
@@ -153,7 +156,7 @@ class ImageHelper(Helper):
         sum = 0
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            if key and key not in keys_to_drop:
+            if is_valid_key(key, keys_to_drop):
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
                 subset_len = number_of_entries_test
