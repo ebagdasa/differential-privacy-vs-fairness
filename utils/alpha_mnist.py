@@ -1,8 +1,9 @@
 import torch
 import numpy as np
+import torchvision
 
 
-class AlphaMNISTDataset(torch.utils.data.datasets.MNIST):
+class AlphaMNISTDataset(torchvision.datasets.MNIST):
     def __init__(self, alpha, classes_to_keep, fixed_n_train,
                  minority_group_keys, labels_mapping, **kwargs):
         super(AlphaMNISTDataset, self).__init__(**kwargs)
@@ -15,15 +16,12 @@ class AlphaMNISTDataset(torch.utils.data.datasets.MNIST):
             idx = np.isin(self.targets.numpy(), classes_to_keep)
             self.targets = self.targets[idx].to(dtype=torch.float32)
             self.data = self.data[idx]
-            self.apply_alpha_to_dataset(minority_group_keys,
-                                        alpha,
-                                        labels_mapping,
-                                        fixed_n_train)
+            self.apply_alpha_to_dataset(alpha=alpha, n_train=fixed_n_train)
 
             print("[DEBUG] dataset size after filtering"
-                  "/alpha-balancing size: %s" % len(self.train_dataset))
+                  "/alpha-balancing size: %s" % len(self))
             print("[DEBUG] unique labels: {}".format(
-                self.train_dataset.targets.unique()))
+                self.targets.unique()))
 
     def __len__(self):
         return len(self.data)
@@ -41,15 +39,12 @@ class AlphaMNISTDataset(torch.utils.data.datasets.MNIST):
         anno = np.isin(labels, self.majority_group_keys).flatten()
         return anno
 
-    def apply_alpha_to_dataset(self, minority_group_keys: list = None,
-                               alpha: float = None,
-                               n_train: int = None):
+    def apply_alpha_to_dataset(self, alpha: float = None, n_train: int = None):
         """
 
         :param dataset: torch dataset.
         :param alpha: float; proportion of samples to keep in the majority group. Majority
             group is defined as the group with label 1.
-        :param labels_mapping: dict mapping true labels to binary labels.
         :return:
         """
         if alpha is not None:
@@ -57,7 +52,7 @@ class AlphaMNISTDataset(torch.utils.data.datasets.MNIST):
             majority_idxs = np.argwhere(
                 np.isin(self.targets, self.majority_group_keys)).flatten()
             minority_idxs = np.argwhere(
-                np.isin(self.targets, minority_group_keys)).flatten()
+                np.isin(self.targets, self.minority_group_keys)).flatten()
             if n_train:
                 # Check that fixed training set size is less than or equal to full data
                 # size.
@@ -70,9 +65,9 @@ class AlphaMNISTDataset(torch.utils.data.datasets.MNIST):
             # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the 
             # minority.
             print("[DEBUG] sampling n_maj={} elements from {} majority items {}".format(
-                n_maj, len(majority_idxs), majority_group_keys))
+                n_maj, len(majority_idxs), self.majority_group_keys))
             print("[DEBUG] sampling n_min={} elements from {} minority items {}".format(
-                n_min, len(minority_idxs), minority_group_keys))
+                n_min, len(minority_idxs), self.minority_group_keys))
             majority_idx_sample = np.random.choice(majority_idxs, size=n_maj,
                                                    replace=False)
             minority_idx_sample = np.random.choice(minority_idxs, size=n_min,
