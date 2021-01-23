@@ -29,7 +29,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
-TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist-grouped')
+TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist-grouped', 'mnist')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
