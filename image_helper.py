@@ -35,7 +35,6 @@ def apply_alpha_to_dataset(dataset, minority_group_keys:list=None,
     :return:
     """
     if alpha is not None:
-        assert alpha >= 0.5, "Expect alpha >= 0.5."
         majority_group_keys = list(set(labels_mapping.keys()) - set(minority_group_keys))
         majority_idxs = np.argwhere(np.isin(dataset.targets, majority_group_keys)).flatten()
         minority_idxs = np.argwhere(np.isin(dataset.targets, minority_group_keys)).flatten()
