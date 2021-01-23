@@ -11,7 +11,6 @@ save_on_epochs: [10, 50, 100, 110]
 mu: 1.0
 
 ds_size: 11500
-grouped_mnist_task: True
 
 minority_group_keys: [3, 1]  # Should be a subset of the positive and/or negative class keys.
 positive_class_keys: [3, 8]  # These keys are grouped into the class with label 1.
@@ -21,7 +20,7 @@ fixed_n_train: 11500
 optimizer: SGD
 
 save_model: False
-dataset: mnist
+dataset: mnist-grouped
 model: net
 scheduler: False
 
