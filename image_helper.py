@@ -146,9 +146,6 @@ class ImageHelper(Helper):
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
-        unbalanced_sum = 0
-        for key, indices in per_class_list.items():
-            unbalanced_sum += int(len(indices) * (mu ** key))
 
         logger.info(sum)
         ds_indices = list()
