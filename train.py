@@ -184,16 +184,16 @@ def load_data(helper, params):
         logger.info('after loader')
 
         # Create a unique DataLoader for each class
-        helper.sampler_per_class()
-        logger.info('after sampler')
-        print("[WARNING] the parameter number_of_entries_train is not being used."
-              "If you did not intend to use/apply this parameter, you can safely "
-              "ignore this.")
-        number_of_entries_train = get_number_of_entries_train(args, params)
-        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
-        logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu)
-        logger.info('after sampler test')
+        # helper.sampler_per_class()
+        # logger.info('after sampler')
+        # print("[WARNING] the parameter number_of_entries_train is not being used."
+        #       "If you did not intend to use/apply this parameter, you can safely "
+        #       "ignore this.")
+        # number_of_entries_train = get_number_of_entries_train(args, params)
+        # helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
+        # logger.info('after sampler expo')
+        # helper.sampler_exponential_class_test(mu=mu)
+        # logger.info('after sampler test')
     return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):
