@@ -1,0 +1,34 @@
+test_batch_size: 100
+batch_size: 256
+num_microbatches: 256
+lr: 0.01
+momentum: 0.5
+decay: 0
+dp: False
+epochs: 120
+save_on_epochs: [10, 50, 100, 110]
+
+mu: 1.0
+
+ds_size: 11500
+
+binary_mnist_task: True
+
+grouped_mnist_task: True
+
+key_to_drop: [3, 1]  # This will also be used as the 'minority group' in binary tasks.
+positive_class_keys: [3, 8]  # These keys are grouped into the class with label 1.
+negative_class_keys: [1,7]  # These keys are grouped into the class with label 0.
+fixed_n_train: 11500
+number_of_entries_test: 1000
+optimizer: SGD
+
+save_model: False
+dataset: mnist
+model: net
+#densenet_depth: 100
+scheduler: False
+
+count_norm_cosine_per_batch: False
+
+csigma: 0.9

@@ -23,7 +23,8 @@ from collections import OrderedDict
 POISONED_PARTICIPANT_POS = 0
 
 
-def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
+def apply_alpha_to_dataset(dataset, minority_group_keys:list=None,
+                           alpha:float=None, labels_mapping:dict=None,
                            n_train:int=None):
     """
 
@@ -35,10 +36,9 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
     """
     if alpha is not None:
         assert alpha >= 0.5, "Expect alpha >= 0.5."
-        majority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 1]
-        minority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 0]
-        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
-        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
+        majority_group_keys = list(set(labels_mapping.keys()) - set(minority_group_keys))
+        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_group_keys)).flatten()
+        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_group_keys)).flatten()
         if n_train:
             # Check that fixed training set size is less than or equal to full data size.
             assert n_train <= len(majority_idxs) + len(minority_idxs)
@@ -169,7 +169,8 @@ class ImageHelper(Helper):
 
     def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None,
                                  labels_mapping:dict=None,
-                                 alpha:float=None):
+                                 alpha:float=None,
+                                 minority_group_keys:list=None):
         """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
@@ -188,30 +189,34 @@ class ImageHelper(Helper):
         if dataset == 'cifar10':
             self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
                                                   transform=transform_train)
-            self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
+            self.test_dataset = datasets.CIFAR10('./data', train=False,
+                                                 transform=transform_test)
 
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
                                                    transform=transform_train)
-            self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
+            self.test_dataset = datasets.CIFAR100('./data', train=False,
+                                                  transform=transform_test)
         elif dataset == 'mnist':
-            self.train_dataset = datasets.MNIST('../data', train=True, download=True,
-                                                transform=transforms.Compose([
-                                                    transforms.ToTensor(),
-                                                    transforms.Normalize((0.1307,), (0.3081,))
-                                                ]))
-            self.test_dataset = datasets.MNIST('../data', train=False, transform=transforms.Compose([
+            self.train_dataset = datasets.MNIST(
+                '../data', train=True, download=True,
+                transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))]))
+            self.test_dataset = datasets.MNIST(
+                '../data', train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ]))
+                transforms.Normalize((0.1307,), (0.3081,))]))
             if classes_to_keep:
                 # Filter the training data to only contain the specified classes.
                 print("[DEBUG] train data start size: %s" % len(self.train_dataset))
                 train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
-                self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
+                self.train_dataset.targets = self.train_dataset.targets[train_idx].to(
+                    dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
                 fixed_n_train = self.params.get('fixed_n_train')
                 self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
+                                                            minority_group_keys,
                                                             alpha,
                                                             labels_mapping,
                                                             fixed_n_train)
@@ -219,11 +224,14 @@ class ImageHelper(Helper):
                       "/alpha-balancing size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
                 test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
-                self.test_dataset.targets = self.test_dataset.targets[test_idx].to(dtype=torch.float32)
+                self.test_dataset.targets = self.test_dataset.targets[test_idx].to(
+                    dtype=torch.float32)
                 self.test_dataset.data = self.test_dataset.data[test_idx]
                 print("[DEBUG] test data after filtering size: %s" % len(self.test_dataset))
-                print("[DEBUG] unique train labels: {}".format(self.train_dataset.targets.unique()))
-                print("[DEBUG] unique test labels: {}".format(self.test_dataset.targets.unique()))
+                print("[DEBUG] unique train labels: {}".format(
+                    self.train_dataset.targets.unique()))
+                print("[DEBUG] unique test labels: {}".format(
+                    self.test_dataset.targets.unique()))
 
         self.dataset_size = len(self.train_dataset)
         if classes_to_keep:

@@ -159,16 +159,20 @@ def load_data(helper, params):
         if helper.params.get('binary_mnist_task'):
             true_labels_to_binary_labels = {
                 label: i for i, label in enumerate(classes_to_keep)}
+            minority_group_keys = helper.params['negative_class_keys']
+
         elif helper.params.get('grouped_mnist_task'):
             true_labels_to_binary_labels = {
                 label: int(label in helper.params['positive_class_keys'])
                 for label in classes_to_keep}
+            minority_group_keys = helper.params['key_to_drop']
         else:
             raise ValueError
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
-                                        alpha=args.alpha)
+                                        alpha=args.alpha,
+                                        minority_group_keys=minority_group_keys)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
