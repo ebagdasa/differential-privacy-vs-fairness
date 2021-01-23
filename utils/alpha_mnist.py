@@ -33,11 +33,7 @@ class AlphaMNISTDataset(torchvision.datasets.MNIST):
         # Cast shape of data from [28, 28] -> [1, 28, 28], and change to float.
         img = torch.unsqueeze(self.data[idx, ...], 0).to(dtype=torch.float32)
         label = self.targets[idx]
-        if (self.alpha is not None) and (self.minority_group_keys) and (self.majority_group_keys):
-            # Case: this is a dataset w/minority and majority groups; it will yield triplets.
-            sample = (img, label, idx)
-        else:
-            sample = (img, idx)
+        sample = (img, label, idx)
         return sample
 
     def get_attribute_annotations(self, idxs):
