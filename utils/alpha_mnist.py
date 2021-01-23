@@ -33,7 +33,7 @@ class AlphaMNISTDataset(torchvision.datasets.MNIST):
         # Cast shape of data from [28, 28] -> [1, 28, 28], and change to float.
         img = torch.unsqueeze(self.data[idx, ...], 0).to(dtype=torch.float32)
         label = self.targets[idx]
-        sample = (img, label, idx)
+        sample = (img, idx, label)
         return sample
 
     def get_attribute_annotations(self, idxs):
