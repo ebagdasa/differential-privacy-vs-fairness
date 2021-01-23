@@ -165,7 +165,7 @@ def load_data(helper, params):
             true_labels_to_binary_labels = {
                 label: int(label in helper.params['positive_class_keys'])
                 for label in classes_to_keep}
-            minority_group_keys = helper.params['key_to_drop']
+            minority_group_keys = helper.params['minority_group_keys']
         else:
             raise ValueError
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
@@ -177,20 +177,16 @@ def load_data(helper, params):
         helper.create_loaders()
         logger.info('after loader')
 
-        keys_to_drop = params.get('key_to_drop', list())
-        if not isinstance(keys_to_drop, list):
-            keys_to_drop = list(keys_to_drop)
         # Create a unique DataLoader for each class
         helper.sampler_per_class()
         logger.info('after sampler')
+        print("[WARNING] the parameter number_of_entries_train is not being used."
+              "If you did not intend to use/apply this parameter, you can safely "
+              "ignore this.")
         number_of_entries_train = get_number_of_entries_train(args, params)
-        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
-                                         keys_to_drop=keys_to_drop,
-                                         number_of_entries=number_of_entries_train)
+        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
-                                              number_of_entries_test=params[
-                                                  'number_of_entries_test'])
+        helper.sampler_exponential_class_test(mu=mu)
         logger.info('after sampler test')
     return true_labels_to_binary_labels, classes_to_keep
 
