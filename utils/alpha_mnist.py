@@ -7,6 +7,7 @@ class AlphaMNISTDataset(torchvision.datasets.MNIST):
     def __init__(self, alpha, classes_to_keep, fixed_n_train,
                  minority_group_keys, labels_mapping, **kwargs):
         super(AlphaMNISTDataset, self).__init__(**kwargs)
+        self.alpha = alpha
         self.minority_group_keys = minority_group_keys
         self.majority_group_keys = list(
             set(labels_mapping.keys()) - set(minority_group_keys))
@@ -31,7 +32,11 @@ class AlphaMNISTDataset(torchvision.datasets.MNIST):
             idx = idx.tolist()
         img = self.data[idx, ...]
         label = self.targets[idx]
-        sample = (img, label, idx)
+        if (self.alpha is not None) and (self.minority_group_keys) and (self.majority_group_keys):
+            # Case: this is a dataset w/minority and majority groups; it will yield triplets.
+            sample = (img, label, idx)
+        else:
+            sample = (img, idx)
         return sample
 
     def get_attribute_annotations(self, idxs):
