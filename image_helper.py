@@ -19,49 +19,9 @@ from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from models.simple import SimpleNet
 from collections import OrderedDict
+from utils.alpha_mnist import AlphaMNISTDataset
 
 POISONED_PARTICIPANT_POS = 0
-
-
-def apply_alpha_to_dataset(dataset, minority_group_keys:list=None,
-                           alpha:float=None, labels_mapping:dict=None,
-                           n_train:int=None):
-    """
-
-    :param dataset: torch dataset.
-    :param alpha: float; proportion of samples to keep in the majority group. Majority
-        group is defined as the group with label 1.
-    :param labels_mapping: dict mapping true labels to binary labels.
-    :return:
-    """
-    if alpha is not None:
-        majority_group_keys = list(set(labels_mapping.keys()) - set(minority_group_keys))
-        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_group_keys)).flatten()
-        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_group_keys)).flatten()
-        if n_train:
-            # Check that fixed training set size is less than or equal to full data size.
-            assert n_train <= len(majority_idxs) + len(minority_idxs)
-            n_maj = int(alpha * n_train)
-            n_min = n_train - n_maj
-        else:
-            n_maj = len(majority_idxs)
-            n_min = int((1 - alpha) * float(n_maj) / alpha)
-        # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
-        print("[DEBUG] sampling n_maj={} elements from {} majority items {}".format(
-            n_maj, len(majority_idxs), majority_group_keys))
-        print("[DEBUG] sampling n_min={} elements from {} minority items {}".format(
-            n_min, len(minority_idxs), minority_group_keys))
-        majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
-        minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
-        idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
-        dataset.data = dataset.data[idx_sample]
-        dataset.targets = dataset.targets[idx_sample]
-        assert len(dataset) == (n_min + n_maj), "Sanity check for dataset subsetting."
-        assert abs(
-            float(len(minority_idx_sample)) / len(dataset)
-            - (1 - alpha)) < 0.001, \
-            "Sanity check for minority size within 0.001 of (1-alpha)."
-    return dataset
 
 
 def is_valid_key(key, keys_to_drop) -> bool:
@@ -200,41 +160,24 @@ class ImageHelper(Helper):
                                                    transform=transform_train)
             self.test_dataset = datasets.CIFAR100('./data', train=False,
                                                   transform=transform_test)
-        elif dataset == 'mnist':
-            self.train_dataset = datasets.MNIST(
-                '../data', train=True, download=True,
+        elif 'mnist' in dataset:
+            print("[INFO] initializing train dataset")
+            self.train_dataset = AlphaMNISTDataset(
+                alpha=alpha, classes_to_keep=classes_to_keep,
+                fixed_n_train=self.params.get('fixed_n_train'),
+                minority_group_keys=minority_group_keys,
+                labels_mapping=labels_mapping,
+                root='../data', train=True, download=True,
                 transform=transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize((0.1307,), (0.3081,))]))
-            self.test_dataset = datasets.MNIST(
-                '../data', train=False, transform=transforms.Compose([
+            print("[INFO] initializing test dataset")
+            self.test_dataset = AlphaMNISTDataset(
+                alpha=None, classes_to_keep=classes_to_keep,
+                ficed_n_train=None,
+                root='../data', train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))]))
-            if classes_to_keep:
-                # Filter the training data to only contain the specified classes.
-                print("[DEBUG] train data start size: %s" % len(self.train_dataset))
-                train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
-                self.train_dataset.targets = self.train_dataset.targets[train_idx].to(
-                    dtype=torch.float32)
-                self.train_dataset.data = self.train_dataset.data[train_idx]
-                fixed_n_train = self.params.get('fixed_n_train')
-                self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
-                                                            minority_group_keys,
-                                                            alpha,
-                                                            labels_mapping,
-                                                            fixed_n_train)
-                print("[DEBUG] train data size after filtering"
-                      "/alpha-balancing size: %s" % len(self.train_dataset))
-                print("[DEBUG] test data start size: %s" % len(self.test_dataset))
-                test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
-                self.test_dataset.targets = self.test_dataset.targets[test_idx].to(
-                    dtype=torch.float32)
-                self.test_dataset.data = self.test_dataset.data[test_idx]
-                print("[DEBUG] test data after filtering size: %s" % len(self.test_dataset))
-                print("[DEBUG] unique train labels: {}".format(
-                    self.train_dataset.targets.unique()))
-                print("[DEBUG] unique test labels: {}".format(
-                    self.test_dataset.targets.unique()))
 
         self.dataset_size = len(self.train_dataset)
         if classes_to_keep:
