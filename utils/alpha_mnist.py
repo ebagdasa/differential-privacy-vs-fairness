@@ -30,7 +30,7 @@ class AlphaMNISTDataset(torchvision.datasets.MNIST):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        img = self.data[idx, ...]
+        img = self.data[idx]
         label = self.targets[idx]
         if (self.alpha is not None) and (self.minority_group_keys) and (self.majority_group_keys):
             # Case: this is a dataset w/minority and majority groups; it will yield triplets.
