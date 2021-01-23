@@ -47,10 +47,10 @@ def apply_alpha_to_dataset(dataset, minority_group_keys:list=None,
             n_maj = len(majority_idxs)
             n_min = int((1 - alpha) * float(n_maj) / alpha)
         # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
-        print("[DEBUG] sampling n_maj=%s elements from %s majority items" %
-              (n_maj, len(majority_idxs)))
-        print("[DEBUG] sampling n_min=%s elements from %s minority items" %
-              (n_min, len(minority_idxs)))
+        print("[DEBUG] sampling n_maj={} elements from {} majority items {}".format(
+            n_maj, len(majority_idxs), majority_group_keys))
+        print("[DEBUG] sampling n_min={} elements from {} minority items {}".format(
+            n_min, len(minority_idxs), minority_group_keys))
         majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
         minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
         idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
