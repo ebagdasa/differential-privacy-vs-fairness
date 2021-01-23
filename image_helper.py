@@ -538,7 +538,7 @@ class ImageHelper(Helper):
             num_classes = 10
         elif self.params['dataset'] == 'cifar100':
             num_classes = 100
-        elif self.params['dataset'] == 'mnist' and classes_to_keep:
+        elif ('mnist' in self.params['dataset']) and classes_to_keep:
             num_classes = len(classes_to_keep)
         elif self.params['dataset'] == 'inat':
             num_classes = len(self.labels)
