@@ -559,7 +559,6 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
                                                       torch.nn.MSELoss) else torch.long
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels, labels_type)
             loss = criterion(outputs, binarized_labels_tensor)
-            import ipdb;ipdb.set_trace()
         else:
             loss = criterion(outputs, labels)
 
