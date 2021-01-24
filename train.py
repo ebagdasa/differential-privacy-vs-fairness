@@ -24,6 +24,7 @@ import yaml
 from utils.text_load import *
 from utils.utils import dict_html, create_table, plot_confusion_matrix
 from inception import *
+import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -307,7 +308,13 @@ def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Te
 
 
 def idx_where_true(ary):
-    return np.ravel(np.argwhere(ary.values))
+    if isinstance(ary, pd.DataFrame) or isinstance(ary, pd.Series):
+        bool_indices = ary.values
+    elif isinstance(ary, np.ndarray):
+        bool_indices = ary
+    else:
+        raise ValueError("Got unexpected ary of type {}".format(type(ary)))
+    return np.ravel(np.argwhere(bool_indices))
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
