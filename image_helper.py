@@ -236,8 +236,8 @@ class ImageHelper(Helper):
                 print("[DEBUG] unique test labels: {}".format(self.test_dataset.targets.unique()))
 
         self.dataset_size = len(self.train_dataset)
-        if classes_to_keep:
-            self.labels = classes_to_keep
+        if labels_mapping:
+            self.labels = [0, 1]
         else:
             self.labels = list(range(10))
         return
