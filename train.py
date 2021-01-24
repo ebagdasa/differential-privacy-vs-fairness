@@ -310,8 +310,8 @@ def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Te
 def idx_where_true(ary):
     if isinstance(ary, pd.DataFrame) or isinstance(ary, pd.Series):
         bool_indices = ary.values
-    elif isinstance(ary, np.ndarray):
-        bool_indices = ary
+    elif isinstance(ary, torch.Tensor):
+        bool_indices = ary.detach().cpu().numpy()
     else:
         raise ValueError("Got unexpected ary of type {}".format(type(ary)))
     return np.ravel(np.argwhere(bool_indices))
