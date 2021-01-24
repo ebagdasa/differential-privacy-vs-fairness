@@ -39,6 +39,7 @@ def apply_alpha_to_dataset(dataset, alpha:float=None,
         majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
         minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
         if n_train:
+            print("[DEBUG] applying n_train %s" % n_train)
             # Check that fixed training set size is less than or equal to full data size.
             assert n_train <= len(majority_idxs) + len(minority_idxs)
             n_maj = int(alpha * n_train)
@@ -46,6 +47,9 @@ def apply_alpha_to_dataset(dataset, alpha:float=None,
         else:
             n_maj = len(majority_idxs)
             n_min = int((1 - alpha) * float(n_maj) / alpha)
+        print("[DEBUG] sampling {} elements from minority group {}",format(n_min, minority_keys))
+        print("[DEBUG] sampling {} elements from majority_group {}".format(n_maj, majority_keys))
+
         # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
         majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
         minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
