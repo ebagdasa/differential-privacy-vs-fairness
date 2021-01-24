@@ -156,15 +156,9 @@ def load_data(helper, params):
                               helper.params['negative_class_keys']
 
         # Define the labels mapping.
-        if helper.params.get('binary_mnist_task'):
-            true_labels_to_binary_labels = {
-                label: i for i, label in enumerate(classes_to_keep)}
-        elif helper.params.get('grouped_mnist_task'):
-            true_labels_to_binary_labels = {
-                label: int(label in helper.params['positive_class_keys'])
-                for label in classes_to_keep}
-        else:
-            raise ValueError
+        true_labels_to_binary_labels = {l: 1 if l in params['positive_class_keys'] else 0
+                                        for l in classes_to_keep}
+
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
@@ -565,6 +559,7 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
                                                       torch.nn.MSELoss) else torch.long
             binarized_labels_tensor = binarize_labels_tensor(labels, pos_labels, labels_type)
             loss = criterion(outputs, binarized_labels_tensor)
+            import ipdb;ipdb.set_trace()
         else:
             loss = criterion(outputs, labels)
 
