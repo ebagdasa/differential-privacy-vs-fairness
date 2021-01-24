@@ -33,7 +33,7 @@ TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist')
 
 
 def get_number_of_entries_train(args, params):
