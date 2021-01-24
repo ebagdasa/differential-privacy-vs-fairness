@@ -17,6 +17,7 @@ import numpy as np
 from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
+from utils.mnist_dataset import MNISTWithAttributesDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 
@@ -201,12 +202,15 @@ class ImageHelper(Helper):
                                                    transform=transform_train)
             self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
         elif dataset == 'mnist':
-            self.train_dataset = datasets.MNIST('../data', train=True, download=True,
+            minority_keys = self.params['minority_group_keys']
+            majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
+            self.train_dataset = MNISTWithAttributesDataset(root='../data', train=True, download=True,
                                                 transform=transforms.Compose([
                                                     transforms.ToTensor(),
                                                     transforms.Normalize((0.1307,), (0.3081,))
                                                 ]))
-            self.test_dataset = datasets.MNIST('../data', train=False, transform=transforms.Compose([
+            self.test_dataset = MNISTWithAttributesDataset(root='../data', train=False,
+                                               transform=transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.1307,), (0.3081,))
             ]))
@@ -217,8 +221,6 @@ class ImageHelper(Helper):
                 self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
                 fixed_n_train = self.params.get('fixed_n_train')
-                minority_keys = self.params['minority_group_keys']
-                majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
                 self.train_dataset = apply_alpha_to_dataset(
                     self.train_dataset, alpha, minority_keys=minority_keys,
                     majority_keys=majority_keys, n_train=fixed_n_train)
