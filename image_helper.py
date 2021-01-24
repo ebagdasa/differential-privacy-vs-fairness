@@ -74,7 +74,7 @@ class ImageHelper(Helper):
         self.per_class_loader = OrderedDict()
         per_class_list = defaultdict(list)
         for ind, x in enumerate(self.test_dataset):
-            _, label = x
+            label = x[-1]
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         for key, indices in per_class_list.items():
@@ -86,7 +86,7 @@ class ImageHelper(Helper):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.train_dataset):
-            _, label = x
+            label = x[-1]
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
@@ -143,7 +143,7 @@ class ImageHelper(Helper):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.test_dataset):
-            _, label = x
+            label = x[-1]
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
