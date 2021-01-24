@@ -204,16 +204,17 @@ class ImageHelper(Helper):
         elif dataset == 'mnist':
             minority_keys = self.params['minority_group_keys']
             majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
-            self.train_dataset = MNISTWithAttributesDataset(root='../data', train=True, download=True,
-                                                transform=transforms.Compose([
-                                                    transforms.ToTensor(),
-                                                    transforms.Normalize((0.1307,), (0.3081,))
-                                                ]))
-            self.test_dataset = MNISTWithAttributesDataset(root='../data', train=False,
-                                               transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ]))
+            self.train_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=True, download=True,
+                transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))]))
+            self.test_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=False, transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))]))
             if classes_to_keep:
                 # Filter the training data to only contain the specified classes.
                 print("[DEBUG] train data start size: %s" % len(self.train_dataset))
