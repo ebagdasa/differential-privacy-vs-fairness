@@ -173,18 +173,16 @@ def load_data(helper, params):
         helper.create_loaders()
         logger.info('after loader')
 
-        keys_to_drop = params.get('key_to_drop', list())
-        if not isinstance(keys_to_drop, list):
-            keys_to_drop = list(keys_to_drop)
-        # Create a unique DataLoader for each class
+        # Create a unique DataLoader for each class. We do not use the kys_to_drop param
+        # since alpha-balancing is applied at dataset creation step; so, we can just
+        # sample the classes uniformly and achieve the desired alpha-imbalance.
         helper.sampler_per_class()
         logger.info('after sampler')
         number_of_entries_train = get_number_of_entries_train(args, params)
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
-                                         keys_to_drop=keys_to_drop,
                                          number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
-        helper.sampler_exponential_class_test(mu=mu, keys_to_drop=keys_to_drop,
+        helper.sampler_exponential_class_test(mu=mu,
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
@@ -544,6 +542,8 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
         else:
             inputs, labels = data
 
+        # We do not use key_to_drop, but this is left to keep compatibility with, and
+        # preserve reproducibility, for older versions of the params files.
         if helper.params.get('key_to_drop'):
             keys_input = labels == helper.params['key_to_drop']
 

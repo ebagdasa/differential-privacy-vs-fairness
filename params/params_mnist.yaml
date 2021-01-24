@@ -15,7 +15,7 @@ ds_size: 5800
 
 binary_mnist_task: True
 
-#key_to_drop: [8,]  # This will also be used as the 'minority group' in binary tasks.
+minority_group_keys: [8,]  # Should be a subset of the positive and/or negative class keys.
 positive_class_keys: [3, ]  # These keys are grouped into the class with label 1.
 negative_class_keys: [8,]  # These keys are grouped into the class with label 0.
 fixed_n_train: 5800
