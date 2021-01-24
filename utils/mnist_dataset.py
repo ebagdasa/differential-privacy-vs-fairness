@@ -30,7 +30,7 @@ class MNISTWithAttributesDataset(datasets.MNIST):
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img, target
+        return img, index, target
 
     def get_attribute_annotations(self, idxs):
         batch_targets = self.targets[idxs]
