@@ -23,7 +23,8 @@ from collections import OrderedDict
 POISONED_PARTICIPANT_POS = 0
 
 
-def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
+def apply_alpha_to_dataset(dataset, alpha:float=None,
+                           minority_keys=None, majority_keys=None,
                            n_train:int=None):
     """
 
@@ -35,8 +36,6 @@ def apply_alpha_to_dataset(dataset, alpha:float=None, labels_mapping:dict=None,
     """
     if alpha is not None:
         assert alpha >= 0.5, "Expect alpha >= 0.5."
-        majority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 1]
-        minority_keys = [true_lab for true_lab, bin_lab in labels_mapping.items() if bin_lab == 0]
         majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
         minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
         if n_train:
@@ -214,10 +213,11 @@ class ImageHelper(Helper):
                 self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
                 self.train_dataset.data = self.train_dataset.data[train_idx]
                 fixed_n_train = self.params.get('fixed_n_train')
-                self.train_dataset = apply_alpha_to_dataset(self.train_dataset,
-                                                            alpha,
-                                                            labels_mapping,
-                                                            fixed_n_train)
+                minority_keys = self.params['minority_group_keys']
+                majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
+                self.train_dataset = apply_alpha_to_dataset(
+                    self.train_dataset, alpha, minority_keys=minority_keys,
+                    majority_keys=majority_keys, n_train=fixed_n_train)
                 print("[DEBUG] train data size after filtering"
                       "/alpha-balancing size: %s" % len(self.train_dataset))
                 print("[DEBUG] test data start size: %s" % len(self.test_dataset))
