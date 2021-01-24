@@ -344,20 +344,20 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             if labels_mapping:
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
-                labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+                binary_labels = binarize_labels_tensor(labels, pos_labels, labels_type)
 
-            n_test += labels.size(0)
+            n_test += binary_labels.size(0)
 
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
-                correct_labels.extend([x.item() for x in labels])
-                running_metric_total += (predicted == labels).sum().item()
+                correct_labels.extend([x.item() for x in binary_labels])
+                running_metric_total += (predicted == binary_labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
-                batch_ce_loss = ce_loss(outputs, labels)
+                batch_ce_loss = ce_loss(outputs, binary_labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                pos_class_losses.extend(batch_ce_loss[labels == 1])
-                neg_class_losses.extend(batch_ce_loss[labels == 0])
+                pos_class_losses.extend(batch_ce_loss[binary_labels == 1])
+                neg_class_losses.extend(batch_ce_loss[binary_labels == 0])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
@@ -372,7 +372,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                         import ipdb;ipdb.set_trace()
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
-                running_metric_total += compute_mse(outputs, labels)
+                running_metric_total += compute_mse(outputs, binary_labels)
                 main_test_metric = running_metric_total / n_test
 
     if vis:
@@ -400,7 +400,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(
-                    outputs, labels, class_name, grouped_label=labels_mapping[class_name]
+                    outputs, binary_labels, class_name,
+                    grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
             metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
