@@ -25,7 +25,6 @@ optimizer: SGD
 save_model: False
 dataset: mnist
 model: net
-#densenet_depth: 100
 scheduler: False
 
 count_norm_cosine_per_batch: False
