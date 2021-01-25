@@ -10,6 +10,10 @@ class MNISTWithAttributesDataset(datasets.MNIST):
         self.minority_keys = minority_keys
         self.majority_keys = majority_keys
 
+    @property
+    def keys(self):
+        return self.minority_keys + self.majority_keys
+
     def __getitem__(self, index: int):
         """
         Args:

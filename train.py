@@ -326,10 +326,11 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     i = 0
     correct_labels = []
     predict_labels = []
-    pos_class_losses = []
-    neg_class_losses = []
-    pos_attr_losses = []
-    neg_attr_losses = []
+    loss_by_label = defaultdict(list)  # Stores losses by label (usually 0,1)
+    loss_by_attribute = defaultdict(list)
+    loss_by_key = defaultdict(list)  # Stores losses by key (this can be more fine-grained than label)
+    attributes = (0, 1)
+    keys = list() if not hasattr(helper, 'keys') else helper.keys
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
@@ -356,20 +357,17 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 main_test_metric = 100 * running_metric_total / n_test
                 batch_ce_loss = ce_loss(outputs, binary_labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                pos_class_losses.extend(batch_ce_loss[binary_labels == 1])
-                neg_class_losses.extend(batch_ce_loss[binary_labels == 0])
+                for l in helper.labels:
+                    loss_by_label[l].extend(batch_ce_loss[binary_labels == l])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
                     # of the ith element in the batch.
-                    try:
-                        batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
-                        pos_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 1)])
-                        neg_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 0)])
-                    except Exception as e:
-                        print("[WARNING] exception when computing"
-                              "attribute-level loss: {}".format(e))
-                        import ipdb;ipdb.set_trace()
+                    batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
+                    for a in attributes:
+                        loss_by_attribute[a].extend(batch_ce_loss[idx_where_true(batch_attr_labels == a)])
+                    for k in keys:
+                        loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
                 running_metric_total += compute_mse(outputs, binary_labels)
@@ -385,10 +383,12 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
-            plot(epoch, mean_of_tensor_list(pos_class_losses), 'test_loss_per_class/1')
-            plot(epoch, mean_of_tensor_list(pos_attr_losses), 'test_loss_per_attr/1')
-            plot(epoch, mean_of_tensor_list(neg_class_losses), 'test_loss_per_class/0')
-            plot(epoch, mean_of_tensor_list(neg_attr_losses), 'test_loss_per_attr/0')
+            for l in helper.labels:
+                plot(epoch, mean_of_tensor_list(loss_by_label[l]), 'test_loss_per_class/{}'.format(l))
+            for a in attributes:
+                plot(epoch, mean_of_tensor_list(loss_by_attribute[a]), 'test_loss_per_attr/{}'.format(a))
+            for k in keys:
+                plot(epoch, mean_of_tensor_list(loss_by_key[k]), 'test_loss_per_key/{}'.format(k))
         for i, class_name in enumerate(helper.labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
@@ -672,7 +672,7 @@ if __name__ == '__main__':
     criterion = get_criterion(helper)
 
     # Write sample images, for the image classification tasks
-    if helper.params['dataset'] in ('lfw', 'celeba'):
+    if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
         compute_channelwise_mean(helper.train_loader)
 
