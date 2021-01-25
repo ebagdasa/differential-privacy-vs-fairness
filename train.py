@@ -330,7 +330,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     loss_by_attribute = defaultdict(list)
     loss_by_key = defaultdict(list)  # Stores losses by key (this can be more fine-grained than label)
     attributes = (0, 1)
-    keys = list() if not hasattr(helper, 'keys') else helper.keys
+    keys = list() if not hasattr(helper.test_dataset, 'keys') else helper.test_dataset.keys
+    print("[DEBUG] detected the following keys for test metrics: {}".format(keys))
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
