@@ -214,6 +214,10 @@ class ImageHelper(Helper):
                 root='../data', train=False, transform=transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize((0.1307,), (0.3081,))]))
+            self.unnormalized_test_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=False, transform=transforms.ToTensor())
+
             if classes_to_keep:
                 # Filter the training data to only contain the specified classes.
                 print("[DEBUG] train data start size: %s" % len(self.train_dataset))
@@ -248,6 +252,9 @@ class ImageHelper(Helper):
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
                                                        )
+        if hasattr(self, 'unnormalized_test_dataset'):
+            self.unnormalized_test_loader = torch.utils.data.DataLoader(
+                self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'])
 
     def load_faces_data(self):
 
