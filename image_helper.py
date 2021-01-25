@@ -220,23 +220,25 @@ class ImageHelper(Helper):
 
             if classes_to_keep:
                 # Filter the training data to only contain the specified classes.
-                print("[DEBUG] train data start size: %s" % len(self.train_dataset))
-                train_idx = np.isin(self.train_dataset.targets.numpy(), classes_to_keep)
-                self.train_dataset.targets = self.train_dataset.targets[train_idx].to(dtype=torch.float32)
-                self.train_dataset.data = self.train_dataset.data[train_idx]
+                print("[DEBUG] data start size: {} train / {} test".format(
+                    len(self.train_dataset), len(self.test_dataset)))
+                self.train_dataset.apply_classes_to_keep(classes_to_keep)
+                self.test_dataset.apply_classes_to_keep(classes_to_keep)
+                self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
+
+                # Apply alpha-balancing to the training data only.
                 fixed_n_train = self.params.get('fixed_n_train')
                 self.train_dataset = apply_alpha_to_dataset(
                     self.train_dataset, alpha, minority_keys=minority_keys,
                     majority_keys=majority_keys, n_train=fixed_n_train)
-                print("[DEBUG] train data size after filtering"
-                      "/alpha-balancing size: %s" % len(self.train_dataset))
-                print("[DEBUG] test data start size: %s" % len(self.test_dataset))
-                test_idx = np.isin(self.test_dataset.targets.numpy(), classes_to_keep)
-                self.test_dataset.targets = self.test_dataset.targets[test_idx].to(dtype=torch.float32)
-                self.test_dataset.data = self.test_dataset.data[test_idx]
-                print("[DEBUG] test data after filtering size: %s" % len(self.test_dataset))
-                print("[DEBUG] unique train labels: {}".format(self.train_dataset.targets.unique()))
-                print("[DEBUG] unique test labels: {}".format(self.test_dataset.targets.unique()))
+
+                print("[DEBUG] data after filtering/alpha-balancing size: "
+                      "{} train / {} test".format(len(self.train_dataset),
+                                                  len(self.test_dataset)))
+                print("[DEBUG] unique train labels: {}".format(
+                    self.train_dataset.targets.unique()))
+                print("[DEBUG] unique test labels: {}".format(
+                    self.test_dataset.targets.unique()))
 
         self.dataset_size = len(self.train_dataset)
         if labels_mapping:

@@ -1,6 +1,7 @@
 from torchvision import datasets
 import torch
 from PIL import Image
+import numpy as np
 
 class MNISTWithAttributesDataset(datasets.MNIST):
     """A clone of the MNIST dataset, but with
@@ -13,15 +14,16 @@ class MNISTWithAttributesDataset(datasets.MNIST):
     @property
     def keys(self):
         return self.minority_keys + self.majority_keys
+    
+    def apply_classes_to_keep(self, classes_to_keep):
+        """
+        Filter the dataset to only contain observations with labels in classes_to_keep.
+        """
+        train_idx = np.isin(self.targets.numpy(), classes_to_keep)
+        self.targets = self.targets[train_idx].to(dtype=torch.float32)
+        self.data = self.data[train_idx]
 
     def __getitem__(self, index: int):
-        """
-        Args:
-            index (int): Index
-
-        Returns:
-            tuple: (image, target) where target is index of the target class.
-        """
         img, target = self.data[index], int(self.targets[index])
 
         # doing this so that it is consistent with all other datasets
