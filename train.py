@@ -674,7 +674,7 @@ if __name__ == '__main__':
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
-        if len(helper.test_dataset.size()) == 4:
+        if len(helper.test_dataset.data.size()) == 4:
             compute_channelwise_mean(helper.train_loader)
 
     optimizer = get_optimizer(helper)
