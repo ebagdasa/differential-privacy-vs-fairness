@@ -36,7 +36,6 @@ def apply_alpha_to_dataset(dataset, alpha:float=None,
     :return:
     """
     if alpha is not None:
-        assert alpha >= 0.5, "Expect alpha >= 0.5."
         majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
         minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
         if n_train:
