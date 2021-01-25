@@ -214,8 +214,11 @@ def compute_channelwise_mean(dataset):
     return
 
 
-def add_pos_and_neg_summary_images(data_loader, max_images=64):
+def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=None):
     images, idxs, labels = next(iter(data_loader))
+    if labels_mapping:
+        pos_labels = [k for k, v in labels_mapping.items() if v == 1]
+        labels = binarize_labels_tensor(labels, pos_labels, out_type=torch.long)
     attr_labels = data_loader.dataset.get_attribute_annotations(idxs)
     pos_attr_idxs = idx_where_true(attr_labels == 1)
     neg_attr_idxs = idx_where_true(attr_labels == 0)
@@ -674,7 +677,8 @@ if __name__ == '__main__':
 
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
-        add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
+        add_pos_and_neg_summary_images(helper.unnormalized_test_loader,
+                                       labels_mapping=true_labels_to_binary_labels)
         if len(helper.test_dataset.data.size()) == 4:
             compute_channelwise_mean(helper.train_loader)
 
