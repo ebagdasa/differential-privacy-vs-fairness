@@ -679,7 +679,9 @@ if __name__ == '__main__':
     if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader,
                                        labels_mapping=true_labels_to_binary_labels)
-        if len(helper.test_dataset.data.size()) == 4:
+
+        # Skip channelwise mean for MNIST; it only has one channel and means are known.
+        if helper.params['dataset'] != 'mnist':
             compute_channelwise_mean(helper.train_loader)
 
     optimizer = get_optimizer(helper)
