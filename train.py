@@ -350,6 +350,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
                 binary_labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+            else:
+                binary_labels = labels
 
             n_test += binary_labels.size(0)
 
