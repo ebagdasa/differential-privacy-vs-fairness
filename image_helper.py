@@ -434,7 +434,7 @@ class ImageHelper(Helper):
     def load_lfw_data(self):
         transform_train = get_lfw_transforms('train')
         transform_test = get_lfw_transforms('test')
-        transform_test_unnormalized = get_lfw_transforms(normalize=False)
+        transform_test_unnormalized = get_lfw_transforms('test', normalize=False)
 
         self.train_dataset = LFWDataset(
             self.params['root_dir'],
