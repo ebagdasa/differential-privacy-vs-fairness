@@ -96,7 +96,7 @@ class ImageHelper(Helper):
         for key, indices in per_class_list.items():
 
             # Case: add all instances of the class to indices.
-            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+            if (keys_to_drop is None) or (key and key not in keys_to_drop):
 
                 unbalanced_sum += len(indices)
             # Case: add only number_of_entries of the class to indices.
@@ -122,7 +122,7 @@ class ImageHelper(Helper):
         for key, indices in per_class_list.items():
             random.shuffle(indices)
 
-            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+            if (keys_to_drop is None) or (key and key not in keys_to_drop):
                 # Case: add all instances of the class to indices.
 
                 subset_len = len(indices)
@@ -161,7 +161,7 @@ class ImageHelper(Helper):
         for key, indices in per_class_list.items():
             random.shuffle(indices)
 
-            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+            if (keys_to_drop is None) or (key and key not in keys_to_drop):
 
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
