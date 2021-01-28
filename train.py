@@ -696,7 +696,6 @@ if __name__ == '__main__':
                                                      milestones=[0.5 * epochs,
                                                                  0.75 * epochs],
                                                      gamma=0.1)
-    import ipdb;ipdb.set_trace()
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
