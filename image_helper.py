@@ -20,8 +20,10 @@ from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from utils.mnist_dataset import MNISTWithAttributesDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
+from utils.alpha_mnist import AlphaMNISTDataset
 
 POISONED_PARTICIPANT_POS = 0
+
 
 
 def apply_alpha_to_dataset(dataset, alpha:float=None,
@@ -64,6 +66,7 @@ def apply_alpha_to_dataset(dataset, alpha:float=None,
     return dataset
 
 
+
 class ImageHelper(Helper):
 
     def poison(self):
@@ -81,7 +84,7 @@ class ImageHelper(Helper):
                 'test_batch_size'], sampler=torch.utils.data.sampler.SubsetRandomSampler(indices))
 
     def sampler_exponential_class(self, mu=1, total_number=40000,
-                                  keys_to_drop:list=False, number_of_entries=False):
+                                  keys_to_drop: list = None, number_of_entries=None):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.train_dataset):
@@ -91,8 +94,10 @@ class ImageHelper(Helper):
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         unbalanced_sum = 0
         for key, indices in per_class_list.items():
+
             # Case: add all instances of the class to indices.
             if (keys_to_drop is False) or (key and key not in keys_to_drop):
+
                 unbalanced_sum += len(indices)
             # Case: add only number_of_entries of the class to indices.
             elif key and key in keys_to_drop:
@@ -116,8 +121,10 @@ class ImageHelper(Helper):
         # Build the list of indices for the dataset
         for key, indices in per_class_list.items():
             random.shuffle(indices)
+
             if (keys_to_drop is False) or (key and key not in keys_to_drop):
                 # Case: add all instances of the class to indices.
+
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
                 # Case: add only number_of_entries of the class to indices.
@@ -137,8 +144,8 @@ class ImageHelper(Helper):
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True)
 
-    def sampler_exponential_class_test(self, mu=1, keys_to_drop:list=False,
-                                       number_of_entries_test=False):
+    def sampler_exponential_class_test(self, mu=1, keys_to_drop: list = None,
+                                       number_of_entries_test=None):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.test_dataset):
@@ -146,9 +153,6 @@ class ImageHelper(Helper):
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
-        unbalanced_sum = 0
-        for key, indices in per_class_list.items():
-            unbalanced_sum += int(len(indices) * (mu ** key))
 
         logger.info(sum)
         ds_indices = list()
@@ -156,7 +160,9 @@ class ImageHelper(Helper):
         sum = 0
         for key, indices in per_class_list.items():
             random.shuffle(indices)
+
             if (keys_to_drop is False) or (key and key not in keys_to_drop):
+
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
                 subset_len = number_of_entries_test
@@ -175,7 +181,8 @@ class ImageHelper(Helper):
 
     def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None,
                                  labels_mapping:dict=None,
-                                 alpha:float=None):
+                                 alpha:float=None,
+                                 minority_group_keys:list=None):
         """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
@@ -194,21 +201,25 @@ class ImageHelper(Helper):
         if dataset == 'cifar10':
             self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
                                                   transform=transform_train)
-            self.test_dataset = datasets.CIFAR10('./data', train=False, transform=transform_test)
+            self.test_dataset = datasets.CIFAR10('./data', train=False,
+                                                 transform=transform_test)
 
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
                                                    transform=transform_train)
+
             self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
         elif dataset == 'mnist':
             minority_keys = self.params['minority_group_keys']
             majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
             self.train_dataset = MNISTWithAttributesDataset(
                 minority_keys=minority_keys, majority_keys=majority_keys,
+
                 root='../data', train=True, download=True,
                 transform=transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize((0.1307,), (0.3081,))]))
+
             self.test_dataset = MNISTWithAttributesDataset(
                 minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transforms.Compose([
@@ -239,6 +250,7 @@ class ImageHelper(Helper):
                     self.train_dataset.targets.unique()))
                 print("[DEBUG] unique test labels: {}".format(
                     self.test_dataset.targets.unique()))
+
 
         self.dataset_size = len(self.train_dataset)
         if labels_mapping:
@@ -601,7 +613,7 @@ class ImageHelper(Helper):
             num_classes = 10
         elif self.params['dataset'] == 'cifar100':
             num_classes = 100
-        elif self.params['dataset'] == 'mnist' and classes_to_keep:
+        elif ('mnist' in self.params['dataset']) and classes_to_keep:
             num_classes = len(classes_to_keep)
         elif self.params['dataset'] == 'inat':
             num_classes = len(self.labels)

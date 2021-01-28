@@ -30,11 +30,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
+
 TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
 MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist')
+
 
 
 def get_number_of_entries_train(args, params):
@@ -163,7 +165,8 @@ def load_data(helper, params):
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
-                                        alpha=args.alpha)
+                                        alpha=args.alpha,
+                                        minority_group_keys=minority_group_keys)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
@@ -181,6 +184,7 @@ def load_data(helper, params):
                                               number_of_entries_test=params[
                                                   'number_of_entries_test'])
         logger.info('after sampler test')
+
     return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):
@@ -294,6 +298,7 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         )
     mse = (outputs - labels) ** 2
     return torch.mean(mse)
+
 
 
 def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Tensor:
@@ -692,7 +697,7 @@ if __name__ == '__main__':
                                                      milestones=[0.5 * epochs,
                                                                  0.75 * epochs],
                                                      gamma=0.1)
-
+    import ipdb;ipdb.set_trace()
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
