@@ -532,7 +532,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
         optimizer.step()
 
-        if i > 0 and i % 100 == 0:
+        if i > 0 and i % 10 == 0:
             logger.info('[epoch %d, batch %5d] loss: %.3f' %
                         (epoch + 1, i + 1, batch_loss))
             plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
