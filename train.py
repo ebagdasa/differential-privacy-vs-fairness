@@ -24,16 +24,19 @@ import yaml
 from utils.text_load import *
 from utils.utils import dict_html, create_table, plot_confusion_matrix
 from inception import *
+import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
-TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist-grouped', 'mnist')
+
+TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist-grouped')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist')
+
 
 
 def get_number_of_entries_train(args, params):
@@ -155,25 +158,10 @@ def load_data(helper, params):
             classes_to_keep = helper.params['positive_class_keys'] + \
                               helper.params['negative_class_keys']
 
-        if helper.params['dataset'] == 'mnist-grouped':
-            true_labels_to_binary_labels = {
-                label: int(label in helper.params['positive_class_keys'])
-                for label in classes_to_keep}
-            minority_group_keys = helper.params['minority_group_keys']
-
         # Define the labels mapping.
-        elif helper.params['dataset'] == 'mnist':
-            true_labels_to_binary_labels = {
-                label: i for i, label in enumerate(classes_to_keep)}
-            minority_group_keys = helper.params['negative_class_keys']
+        true_labels_to_binary_labels = {l: 1 if l in params['positive_class_keys'] else 0
+                                        for l in classes_to_keep}
 
-        else:
-            raise ValueError
-        if helper.params.get('grouped_mnist_task') or helper.params.get('binary_mnist_task'):
-            print("[WARNING] you are using deprecated parameter, either"
-                  "'grouped_mnist_task' or 'binary_mnist_task'. Ignoring this parameter."
-                  "Use 'dataset: mnist-grouped' for grouped instead; otherwise binary"
-                  "is used by default when 'dataset: mnist' is used.")
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
@@ -183,17 +171,20 @@ def load_data(helper, params):
         helper.create_loaders()
         logger.info('after loader')
 
-        # Create a unique DataLoader for each class
-        # helper.sampler_per_class()
-        # logger.info('after sampler')
-        # print("[WARNING] the parameter number_of_entries_train is not being used."
-        #       "If you did not intend to use/apply this parameter, you can safely "
-        #       "ignore this.")
-        # number_of_entries_train = get_number_of_entries_train(args, params)
-        # helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'])
-        # logger.info('after sampler expo')
-        # helper.sampler_exponential_class_test(mu=mu)
-        # logger.info('after sampler test')
+        # Create a unique DataLoader for each class. We do not use the kys_to_drop param
+        # since alpha-balancing is applied at dataset creation step; so, we can just
+        # sample the classes uniformly and achieve the desired alpha-imbalance.
+        helper.sampler_per_class()
+        logger.info('after sampler')
+        number_of_entries_train = get_number_of_entries_train(args, params)
+        helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
+                                         number_of_entries=number_of_entries_train)
+        logger.info('after sampler expo')
+        helper.sampler_exponential_class_test(mu=mu,
+                                              number_of_entries_test=params[
+                                                  'number_of_entries_test'])
+        logger.info('after sampler test')
+
     return true_labels_to_binary_labels, classes_to_keep
 
 def mean_of_tensor_list(lst):
@@ -227,8 +218,11 @@ def compute_channelwise_mean(dataset):
     return
 
 
-def add_pos_and_neg_summary_images(data_loader, max_images=64):
+def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=None):
     images, idxs, labels = next(iter(data_loader))
+    if labels_mapping:
+        pos_labels = [k for k, v in labels_mapping.items() if v == 1]
+        labels = binarize_labels_tensor(labels, pos_labels, out_type=torch.long)
     attr_labels = data_loader.dataset.get_attribute_annotations(idxs)
     pos_attr_idxs = idx_where_true(attr_labels == 1)
     neg_attr_idxs = idx_where_true(attr_labels == 0)
@@ -306,6 +300,7 @@ def compute_mse(outputs: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
     return torch.mean(mse)
 
 
+
 def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Tensor:
     per_class_idx = labels == target_class
     per_class_outputs = outputs[per_class_idx]
@@ -321,7 +316,13 @@ def per_class_mse(outputs, labels, target_class, grouped_label=None) -> torch.Te
 
 
 def idx_where_true(ary):
-    return np.ravel(np.argwhere(ary.values))
+    if isinstance(ary, pd.DataFrame) or isinstance(ary, pd.Series):
+        bool_indices = ary.values
+    elif isinstance(ary, torch.Tensor):
+        bool_indices = ary.detach().cpu().numpy()
+    else:
+        raise ValueError("Got unexpected ary of type {}".format(type(ary)))
+    return np.ravel(np.argwhere(bool_indices))
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
@@ -333,10 +334,12 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     i = 0
     correct_labels = []
     predict_labels = []
-    pos_class_losses = []
-    neg_class_losses = []
-    pos_attr_losses = []
-    neg_attr_losses = []
+    loss_by_label = defaultdict(list)  # Stores losses by label (usually 0,1)
+    loss_by_attribute = defaultdict(list)
+    loss_by_key = defaultdict(list)  # Stores losses by key (this can be more fine-grained than label)
+    attributes = (0, 1)
+    keys = list() if not hasattr(helper.test_dataset, 'keys') else helper.test_dataset.keys
+    print("[DEBUG] detected the following keys for test metrics: {}".format(keys))
     metric_name = 'accuracy' if not mse else 'mse'
     with torch.no_grad():
         for data in tqdm(testloader):
@@ -351,35 +354,34 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             if labels_mapping:
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
-                labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+                binary_labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+            else:
+                binary_labels = labels
 
-            n_test += labels.size(0)
+            n_test += binary_labels.size(0)
 
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
-                correct_labels.extend([x.item() for x in labels])
-                running_metric_total += (predicted == labels).sum().item()
+                correct_labels.extend([x.item() for x in binary_labels])
+                running_metric_total += (predicted == binary_labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
-                batch_ce_loss = ce_loss(outputs, labels)
+                batch_ce_loss = ce_loss(outputs, binary_labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                pos_class_losses.extend(batch_ce_loss[labels == 1])
-                neg_class_losses.extend(batch_ce_loss[labels == 0])
+                for l in helper.labels:
+                    loss_by_label[l].extend(batch_ce_loss[binary_labels == l])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
                     # of the ith element in the batch.
-                    try:
-                        batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
-                        pos_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 1)])
-                        neg_attr_losses.extend(batch_ce_loss[idx_where_true(batch_attr_labels == 0)])
-                    except Exception as e:
-                        print("[WARNING] exception when computing"
-                              "attribute-level loss: {}".format(e))
-                        import ipdb;ipdb.set_trace()
+                    batch_attr_labels = helper.test_dataset.get_attribute_annotations(idxs)
+                    for a in attributes:
+                        loss_by_attribute[a].extend(batch_ce_loss[idx_where_true(batch_attr_labels == a)])
+                    for k in keys:
+                        loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
-                running_metric_total += compute_mse(outputs, labels)
+                running_metric_total += compute_mse(outputs, binary_labels)
                 main_test_metric = running_metric_total / n_test
 
     if vis:
@@ -392,10 +394,12 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
-            plot(epoch, mean_of_tensor_list(pos_class_losses), 'test_loss_per_class/1')
-            plot(epoch, mean_of_tensor_list(pos_attr_losses), 'test_loss_per_attr/1')
-            plot(epoch, mean_of_tensor_list(neg_class_losses), 'test_loss_per_class/0')
-            plot(epoch, mean_of_tensor_list(neg_attr_losses), 'test_loss_per_attr/0')
+            for l in helper.labels:
+                plot(epoch, mean_of_tensor_list(loss_by_label[l]), 'test_loss_per_class/{}'.format(l))
+            for a in attributes:
+                plot(epoch, mean_of_tensor_list(loss_by_attribute[a]), 'test_loss_per_attr/{}'.format(a))
+            for k in keys:
+                plot(epoch, mean_of_tensor_list(loss_by_key[k]), 'test_loss_per_key/{}'.format(k))
         for i, class_name in enumerate(helper.labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
@@ -407,7 +411,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(
-                    outputs, labels, class_name, grouped_label=labels_mapping[class_name]
+                    outputs, binary_labels, class_name,
+                    grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
             metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
@@ -550,6 +555,8 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
         else:
             inputs, labels = data
 
+        # We do not use key_to_drop, but this is left to keep compatibility with, and
+        # preserve reproducibility, for older versions of the params files.
         if helper.params.get('key_to_drop'):
             keys_input = labels == helper.params['key_to_drop']
 
@@ -676,9 +683,13 @@ if __name__ == '__main__':
     criterion = get_criterion(helper)
 
     # Write sample images, for the image classification tasks
-    if helper.params['dataset'] in ('lfw', 'celeba'):
-        add_pos_and_neg_summary_images(helper.unnormalized_test_loader)
-        compute_channelwise_mean(helper.train_loader)
+    if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
+        add_pos_and_neg_summary_images(helper.unnormalized_test_loader,
+                                       labels_mapping=true_labels_to_binary_labels)
+
+        # Skip channelwise mean for MNIST; it only has one channel and means are known.
+        if helper.params['dataset'] != 'mnist':
+            compute_channelwise_mean(helper.train_loader)
 
     optimizer = get_optimizer(helper)
 

@@ -17,6 +17,7 @@ import numpy as np
 from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
+from utils.mnist_dataset import MNISTWithAttributesDataset
 from models.simple import SimpleNet
 from collections import OrderedDict
 from utils.alpha_mnist import AlphaMNISTDataset
@@ -24,8 +25,47 @@ from utils.alpha_mnist import AlphaMNISTDataset
 POISONED_PARTICIPANT_POS = 0
 
 
-def is_valid_key(key, keys_to_drop) -> bool:
-    return key and ((keys_to_drop is None) or (key not in keys_to_drop))
+
+def apply_alpha_to_dataset(dataset, alpha:float=None,
+                           minority_keys=None, majority_keys=None,
+                           n_train:int=None):
+    """
+
+    :param dataset: torch dataset.
+    :param alpha: float; proportion of samples to keep in the majority group. Majority
+        group is defined as the group with label 1.
+    :param labels_mapping: dict mapping true labels to binary labels.
+    :return:
+    """
+    if alpha is not None:
+        majority_idxs = np.argwhere(np.isin(dataset.targets, majority_keys)).flatten()
+        minority_idxs = np.argwhere(np.isin(dataset.targets, minority_keys)).flatten()
+        if n_train:
+            print("[DEBUG] applying n_train %s" % n_train)
+            # Check that fixed training set size is less than or equal to full data size.
+            assert n_train <= len(majority_idxs) + len(minority_idxs)
+            n_maj = int(alpha * n_train)
+            n_min = n_train - n_maj
+        else:
+            n_maj = len(majority_idxs)
+            n_min = int((1 - alpha) * float(n_maj) / alpha)
+        print("[DEBUG] sampling {} elements from minority group {}".format(n_min, minority_keys))
+        print("[DEBUG] sampling {} elements from majority_group {}".format(n_maj, majority_keys))
+
+        # Sample alpha * n_sub from the majority, and (1-alpha)*n_sub from the minority.
+        majority_idx_sample = np.random.choice(majority_idxs, size=n_maj, replace=False)
+        minority_idx_sample = np.random.choice(minority_idxs, size=n_min, replace=False)
+        idx_sample = np.concatenate((majority_idx_sample, minority_idx_sample))
+        dataset.data = dataset.data[idx_sample]
+        dataset.targets = dataset.targets[idx_sample]
+        assert len(dataset) == (n_min + n_maj), "Sanity check for dataset subsetting."
+        assert abs(
+            float(len(minority_idx_sample)) / len(dataset)
+            - (1 - alpha)) < 0.001, \
+            "Sanity check for minority size within 0.001 of (1-alpha)."
+    return dataset
+
+
 
 class ImageHelper(Helper):
 
@@ -36,7 +76,7 @@ class ImageHelper(Helper):
         self.per_class_loader = OrderedDict()
         per_class_list = defaultdict(list)
         for ind, x in enumerate(self.test_dataset):
-            _, label = x
+            label = x[-1]
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         for key, indices in per_class_list.items():
@@ -48,16 +88,21 @@ class ImageHelper(Helper):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.train_dataset):
-            _, label = x
+            label = x[-1]
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
         unbalanced_sum = 0
         for key, indices in per_class_list.items():
-            if is_valid_key(key, keys_to_drop):
+
+            # Case: add all instances of the class to indices.
+            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+
                 unbalanced_sum += len(indices)
+            # Case: add only number_of_entries of the class to indices.
             elif key and key in keys_to_drop:
                 unbalanced_sum += number_of_entries
+            # This is a special case, keep (mu ** key) * proportion instances.
             else:
                 unbalanced_sum += int(len(indices) * (mu ** key))
 
@@ -76,11 +121,13 @@ class ImageHelper(Helper):
         # Build the list of indices for the dataset
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            if is_valid_key(key, keys_to_drop):
-                # Case: this is a 'normal' class; keep all its instances.
+
+            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+                # Case: add all instances of the class to indices.
+
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
-                # Case: this is a key_to_drop; keep number_of_entries instances.
+                # Case: add only number_of_entries of the class to indices.
                 subset_len = number_of_entries
             else:
                 # This is a special case, keep (mu ** key) * proportion instances.
@@ -102,7 +149,7 @@ class ImageHelper(Helper):
         per_class_list = defaultdict(list)
         sum = 0
         for ind, x in enumerate(self.test_dataset):
-            _, label = x
+            label = x[-1]
             sum += 1
             per_class_list[int(label)].append(ind)
         per_class_list = OrderedDict(sorted(per_class_list.items(), key=lambda t: t[0]))
@@ -113,7 +160,9 @@ class ImageHelper(Helper):
         sum = 0
         for key, indices in per_class_list.items():
             random.shuffle(indices)
-            if is_valid_key(key, keys_to_drop):
+
+            if (keys_to_drop is False) or (key and key not in keys_to_drop):
+
                 subset_len = len(indices)
             elif key and key in keys_to_drop:
                 subset_len = number_of_entries_test
@@ -158,31 +207,54 @@ class ImageHelper(Helper):
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
                                                    transform=transform_train)
-            self.test_dataset = datasets.CIFAR100('./data', train=False,
-                                                  transform=transform_test)
-        elif 'mnist' in dataset:
-            print("[INFO] initializing train dataset")
-            self.train_dataset = AlphaMNISTDataset(
-                alpha=alpha, classes_to_keep=classes_to_keep,
-                fixed_n_train=self.params.get('fixed_n_train'),
-                minority_group_keys=minority_group_keys,
-                labels_mapping=labels_mapping,
+
+            self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
+        elif dataset == 'mnist':
+            minority_keys = self.params['minority_group_keys']
+            majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
+            self.train_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+
                 root='../data', train=True, download=True,
                 transform=transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize((0.1307,), (0.3081,))]))
-            print("[INFO] initializing test dataset")
-            self.test_dataset = AlphaMNISTDataset(
-                alpha=None, classes_to_keep=classes_to_keep,
-                fixed_n_train=None, minority_group_keys=minority_group_keys,
-                labels_mapping=labels_mapping,
+
+            self.test_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))]))
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))]))
+            self.unnormalized_test_dataset = MNISTWithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=False, transform=transforms.ToTensor())
+
+            if classes_to_keep:
+                # Filter the training data to only contain the specified classes.
+                print("[DEBUG] data start size: {} train / {} test".format(
+                    len(self.train_dataset), len(self.test_dataset)))
+                self.train_dataset.apply_classes_to_keep(classes_to_keep)
+                self.test_dataset.apply_classes_to_keep(classes_to_keep)
+                self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
+
+                # Apply alpha-balancing to the training data only.
+                fixed_n_train = self.params.get('fixed_n_train')
+                self.train_dataset = apply_alpha_to_dataset(
+                    self.train_dataset, alpha, minority_keys=minority_keys,
+                    majority_keys=majority_keys, n_train=fixed_n_train)
+
+                print("[DEBUG] data after filtering/alpha-balancing size: "
+                      "{} train / {} test".format(len(self.train_dataset),
+                                                  len(self.test_dataset)))
+                print("[DEBUG] unique train labels: {}".format(
+                    self.train_dataset.targets.unique()))
+                print("[DEBUG] unique test labels: {}".format(
+                    self.test_dataset.targets.unique()))
+
 
         self.dataset_size = len(self.train_dataset)
-        if classes_to_keep:
-            self.labels = classes_to_keep
+        if labels_mapping:
+            self.labels = [0, 1]
         else:
             self.labels = list(range(10))
         return
@@ -194,6 +266,9 @@ class ImageHelper(Helper):
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
                                                        )
+        if hasattr(self, 'unnormalized_test_dataset'):
+            self.unnormalized_test_loader = torch.utils.data.DataLoader(
+                self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'])
 
     def load_faces_data(self):
 
@@ -371,7 +446,7 @@ class ImageHelper(Helper):
     def load_lfw_data(self):
         transform_train = get_lfw_transforms('train')
         transform_test = get_lfw_transforms('test')
-        transform_test_unnormalized = get_lfw_transforms(normalize=False)
+        transform_test_unnormalized = get_lfw_transforms('test', normalize=False)
 
         self.train_dataset = LFWDataset(
             self.params['root_dir'],
