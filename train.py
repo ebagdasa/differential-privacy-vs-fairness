@@ -165,8 +165,7 @@ def load_data(helper, params):
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
-                                        alpha=args.alpha,
-                                        minority_group_keys=minority_group_keys)
+                                        alpha=args.alpha)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')

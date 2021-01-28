@@ -181,8 +181,7 @@ class ImageHelper(Helper):
 
     def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None,
                                  labels_mapping:dict=None,
-                                 alpha:float=None,
-                                 minority_group_keys:list=None):
+                                 alpha:float=None):
         """Loads cifar10, cifar100, or MNIST datasets."""
         logger.info('Loading data')
 
