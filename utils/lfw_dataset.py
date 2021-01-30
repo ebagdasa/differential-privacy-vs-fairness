@@ -84,17 +84,17 @@ def get_lfw_transforms(partition, normalize:bool=True):
     rotate = transforms.RandomRotation(degrees=30)
     random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
     flip_aug = transforms.RandomHorizontalFlip()
-    normalize = transforms.Normalize(mean=mu_data, std=std_data)
+    normalize_aug = transforms.Normalize(mean=mu_data, std=std_data)
     center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
 
     transform_train = transforms.Compose([resize,
                                           rotate, random_crop,
                                           flip_aug,
                                           transforms.ToTensor(),
-                                          normalize])
+                                          normalize_aug])
     transform_test = transforms.Compose([resize, center_crop,
                                          transforms.ToTensor(),
-                                         normalize])
+                                         normalize_aug])
 
     transform_test_unnormalized = transforms.Compose([resize, center_crop,
                                          transforms.ToTensor()])
