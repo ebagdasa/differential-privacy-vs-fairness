@@ -97,8 +97,7 @@ def get_lfw_transforms(partition, normalize:bool=True):
                                          normalize])
 
     transform_test_unnormalized = transforms.Compose([resize, center_crop,
-                                         transforms.ToTensor(),
-                                         normalize])
+                                         transforms.ToTensor()])
 
 
     if partition == 'train':
