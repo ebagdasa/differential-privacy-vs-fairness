@@ -119,7 +119,7 @@ def get_criterion(helper):
             criterion = nn.CrossEntropyLoss()
     return criterion
 
-def load_data(helper, params, alpha):
+def load_data(helper, params, alpha, mu):
     classes_to_keep = None
     true_labels_to_binary_labels = None
     if helper.params['dataset'] == 'inat':
@@ -635,7 +635,7 @@ if __name__ == '__main__':
 
     reseed(5)
 
-    true_labels_to_binary_labels, classes_to_keep = load_data(helper, params, alpha)
+    true_labels_to_binary_labels, classes_to_keep = load_data(helper, params, alpha, mu)
     num_classes = helper.get_num_classes(classes_to_keep)
 
     if dp and sigma != 0:
