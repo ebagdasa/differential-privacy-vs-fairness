@@ -19,7 +19,7 @@ fixed_n_train: 11500
 number_of_entries_test: 1000
 optimizer: SGD
 
-save_model: False
+save_model: True
 dataset: mnist
 model: net
 scheduler: False
