@@ -38,20 +38,6 @@ TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist')
 MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist')
 
 
-
-def get_number_of_entries_train(args, params):
-    """Get the number of entries for the minority group in the training set."""
-    if args.number_of_entries_train:  # Case: command-line arg overrides params.
-        num_entries_train = args.number_of_entries_train
-        print("[INFO] overriding number of entries in parameters file; "
-              "using %s entries" % num_entries_train)
-    # Case: use params value, defaulting to False (the null
-    # value in helper.sampler...() functions.
-    else:
-        num_entries_train = params.get('number_of_entries', False)
-    return num_entries_train
-
-
 def get_helper(params, d, name):
     if params.get('model', False) == 'word':
         helper = TextHelper(current_time=d, params=params, name='text')
@@ -133,7 +119,7 @@ def get_criterion(helper):
             criterion = nn.CrossEntropyLoss()
     return criterion
 
-def load_data(helper, params):
+def load_data(helper, params, alpha):
     classes_to_keep = None
     true_labels_to_binary_labels = None
     if helper.params['dataset'] == 'inat':
@@ -152,11 +138,8 @@ def load_data(helper, params):
         # First, define classes_to_keep.
         # Labels are assigned in order of index in this array; so minority_key has
         # label 0, majority_key has label 1.
-        if args.majority_key:  # Case: Majority key command-line arg overrides params
-            classes_to_keep = (args.majority_key, helper.params['minority_key'][0])
-        else:  # Case: Use the label groups defined in params.
-            classes_to_keep = helper.params['positive_class_keys'] + \
-                              helper.params['negative_class_keys']
+        classes_to_keep = helper.params['positive_class_keys'] + \
+                          helper.params['negative_class_keys']
 
         # Define the labels mapping.
         true_labels_to_binary_labels = {l: 1 if l in params['positive_class_keys'] else 0
@@ -165,7 +148,7 @@ def load_data(helper, params):
         helper.load_cifar_or_mnist_data(dataset=params['dataset'],
                                         classes_to_keep=classes_to_keep,
                                         labels_mapping=true_labels_to_binary_labels,
-                                        alpha=args.alpha)
+                                        alpha=alpha)
         logger.info('before loader')
         helper.create_loaders()
         logger.info('after loader')
@@ -175,7 +158,7 @@ def load_data(helper, params):
         # sample the classes uniformly and achieve the desired alpha-imbalance.
         helper.sampler_per_class()
         logger.info('after sampler')
-        number_of_entries_train = get_number_of_entries_train(args, params)
+        number_of_entries_train = params.get('number_of_entries', False)
         helper.sampler_exponential_class(mu=mu, total_number=params['ds_size'],
                                          number_of_entries=number_of_entries_train)
         logger.info('after sampler expo')
@@ -652,7 +635,7 @@ if __name__ == '__main__':
 
     reseed(5)
 
-    true_labels_to_binary_labels, classes_to_keep = load_data(helper, params)
+    true_labels_to_binary_labels, classes_to_keep = load_data(helper, params, alpha)
     num_classes = helper.get_num_classes(classes_to_keep)
 
     if dp and sigma != 0:
