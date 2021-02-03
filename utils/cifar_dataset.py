@@ -13,8 +13,8 @@ class CIFAR10WithAttributesDataset(datasets.CIFAR10):
         self.minority_keys = minority_keys
         self.majority_keys = majority_keys
         self.targets = torch.tensor(self.targets, dtype=torch.long)
-        self.data = torch.from_numpy(self.data.astype(float) / 255.)
-
+        self.data = torch.from_numpy(self.data)  # Tensor of type uint8
+    
     @property
     def keys(self):
         return self.minority_keys + self.majority_keys
