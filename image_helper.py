@@ -197,13 +197,18 @@ class ImageHelper(Helper):
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
+
+        minority_keys = self.params['minority_group_keys']
+        majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
+
         if dataset == 'cifar10':
             self.train_dataset = CIFAR10WithAttributesDataset(
-                './data', train=True,  download=True, transform=transform_train)
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=True,  download=True, transform=transform_train)
             self.test_dataset = CIFAR10WithAttributesDataset(
-                './data', train=False, transform=transform_test)
+                root='../data', train=False, transform=transform_test)
             self.unnormalized_test_dataset = CIFAR10WithAttributesDataset(
-                './data', train=False, transform=transforms.ToTensor())
+                root='../data', train=False, transform=transforms.ToTensor())
 
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
@@ -211,8 +216,6 @@ class ImageHelper(Helper):
 
             self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
         elif dataset == 'mnist':
-            minority_keys = self.params['minority_group_keys']
-            majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
             self.train_dataset = MNISTWithAttributesDataset(
                 minority_keys=minority_keys, majority_keys=majority_keys,
 
