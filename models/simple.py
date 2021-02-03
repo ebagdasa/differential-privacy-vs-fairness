@@ -117,7 +117,7 @@ class FlexiNet(SimpleNet):
         super(FlexiNet, self).__init__()
         self.conv1 = nn.Conv2d(input_channel, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(13 * 13 * 50, 500)
+        self.fc1 = nn.Linear(1250, 500)
         self.fc2 = nn.Linear(500, output_dim)
 
     def forward(self, x):
@@ -126,7 +126,7 @@ class FlexiNet(SimpleNet):
             x = F.max_pool2d(x, 2, 2)
             x = F.relu(self.conv2(x))
             x = F.max_pool2d(x, 2, 2)
-            x = x.view(-1, 13 * 13 * 50)
+            x = x.view(-1, 1250)
             x = F.relu(self.fc1(x))
             x = self.fc2(x)
             return F.log_softmax(x, dim=1)
