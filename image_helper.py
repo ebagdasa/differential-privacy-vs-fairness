@@ -623,7 +623,7 @@ class ImageHelper(Helper):
 
     def get_num_classes(self, classes_to_keep):
         if self.params['dataset'] == 'cifar10':
-            num_classes = 10
+            num_classes = len(classes_to_keep)
         elif self.params['dataset'] == 'cifar100':
             num_classes = 100
         elif ('mnist' in self.params['dataset']) and classes_to_keep:
