@@ -4,6 +4,8 @@ num_microbatches: 256
 lr: 0.01
 momentum: 0.5
 decay: 0
+S: 1
+z: 0.8
 dp: True
 epochs: 200
 save_on_epochs: [10, 50, 100, 150, 199]
