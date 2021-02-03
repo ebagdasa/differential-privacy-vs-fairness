@@ -12,6 +12,8 @@ class CIFAR10WithAttributesDataset(datasets.CIFAR10):
         super(CIFAR10WithAttributesDataset, self).__init__(**kwargs)
         self.minority_keys = minority_keys
         self.majority_keys = majority_keys
+        self.targets = torch.from_numpy(self.targets)
+        self.data = torch.from_numpy(self.data.astype(float) / 255.)
 
     @property
     def keys(self):
