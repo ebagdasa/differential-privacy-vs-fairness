@@ -190,12 +190,12 @@ class ImageHelper(Helper):
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
 
         transform_test = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
 
         minority_keys = self.params['minority_group_keys']
@@ -256,7 +256,6 @@ class ImageHelper(Helper):
                 self.train_dataset.targets.unique()))
             print("[DEBUG] unique test labels: {}".format(
                 self.test_dataset.targets.unique()))
-        import ipdb;ipdb.set_trace()
 
 
         self.dataset_size = len(self.train_dataset)
