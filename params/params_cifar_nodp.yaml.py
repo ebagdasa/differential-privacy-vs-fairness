@@ -22,7 +22,7 @@ optimizer: SGD
 
 save_model: True
 dataset: cifar10
-model: net
+model: FlexiNet
 scheduler: False
 
 count_norm_cosine_per_batch: False
