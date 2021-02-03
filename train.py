@@ -628,7 +628,7 @@ if __name__ == '__main__':
         # Case: clipping bound S is not specified (no clipping);
         # sigma must be set explicitly in the params.
         sigma = helper.params.get('sigma')
-    alpha = helper.params.get('alpha')
+    alpha = args.alpha
     adaptive_sigma = helper.params.get('adaptive_sigma', False)
     dp = helper.params['dp']
     mu = helper.params['mu']
