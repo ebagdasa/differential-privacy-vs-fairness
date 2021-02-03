@@ -18,9 +18,9 @@ from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from utils.mnist_dataset import MNISTWithAttributesDataset
-from models.simple import SimpleNet
+from utils.cifar_dataset import CIFAR10WithAttributesDataset
 from collections import OrderedDict
-from utils.alpha_mnist import AlphaMNISTDataset
+
 
 POISONED_PARTICIPANT_POS = 0
 
@@ -198,10 +198,12 @@ class ImageHelper(Helper):
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
         if dataset == 'cifar10':
-            self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
-                                                  transform=transform_train)
-            self.test_dataset = datasets.CIFAR10('./data', train=False,
-                                                 transform=transform_test)
+            self.train_dataset = CIFAR10WithAttributesDataset(
+                './data', train=True,  download=True, transform=transform_train)
+            self.test_dataset = CIFAR10WithAttributesDataset(
+                './data', train=False, transform=transform_test)
+            self.unnormalized_test_dataset = CIFAR10WithAttributesDataset(
+                './data', train=False, transform=transforms.ToTensor())
 
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
@@ -228,27 +230,28 @@ class ImageHelper(Helper):
                 minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transforms.ToTensor())
 
-            if classes_to_keep:
-                # Filter the training data to only contain the specified classes.
-                print("[DEBUG] data start size: {} train / {} test".format(
-                    len(self.train_dataset), len(self.test_dataset)))
-                self.train_dataset.apply_classes_to_keep(classes_to_keep)
-                self.test_dataset.apply_classes_to_keep(classes_to_keep)
-                self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
+        if classes_to_keep:
+            # Filter the training data to only contain the specified classes.
+            print("[DEBUG] data start size: {} train / {} test".format(
+                len(self.train_dataset), len(self.test_dataset)))
+            self.train_dataset.apply_classes_to_keep(classes_to_keep)
+            self.test_dataset.apply_classes_to_keep(classes_to_keep)
+            self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
 
-                # Apply alpha-balancing to the training data only.
-                fixed_n_train = self.params.get('fixed_n_train')
-                self.train_dataset = apply_alpha_to_dataset(
-                    self.train_dataset, alpha, minority_keys=minority_keys,
-                    majority_keys=majority_keys, n_train=fixed_n_train)
+            # Apply alpha-balancing to the training data only.
+            fixed_n_train = self.params.get('fixed_n_train')
+            self.train_dataset = apply_alpha_to_dataset(
+                self.train_dataset, alpha, minority_keys=minority_keys,
+                majority_keys=majority_keys, n_train=fixed_n_train)
 
-                print("[DEBUG] data after filtering/alpha-balancing size: "
-                      "{} train / {} test".format(len(self.train_dataset),
-                                                  len(self.test_dataset)))
-                print("[DEBUG] unique train labels: {}".format(
-                    self.train_dataset.targets.unique()))
-                print("[DEBUG] unique test labels: {}".format(
-                    self.test_dataset.targets.unique()))
+            print("[DEBUG] data after filtering/alpha-balancing size: "
+                  "{} train / {} test".format(len(self.train_dataset),
+                                              len(self.test_dataset)))
+            print("[DEBUG] unique train labels: {}".format(
+                self.train_dataset.targets.unique()))
+            print("[DEBUG] unique test labels: {}".format(
+                self.test_dataset.targets.unique()))
+        import ipdb;ipdb.set_trace()
 
 
         self.dataset_size = len(self.train_dataset)
