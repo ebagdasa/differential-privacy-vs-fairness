@@ -7,8 +7,8 @@ decay: 0
 S: 1
 z: 0.8
 dp: True
-epochs: 200
-save_on_epochs: [10, 50, 100, 150, 199]
+epochs: 240
+save_on_epochs: [10, 50, 100, 150, 200, 239]
 
 mu: 1.0
 

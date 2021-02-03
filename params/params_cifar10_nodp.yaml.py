@@ -5,8 +5,8 @@ lr: 0.01
 momentum: 0.5
 decay: 0
 dp: False
-epochs: 200
-save_on_epochs: [10, 50, 100, 150, 199]
+epochs: 240
+save_on_epochs: [10, 50, 100, 150, 200, 239]
 
 mu: 1.0
 
