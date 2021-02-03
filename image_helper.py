@@ -186,16 +186,23 @@ class ImageHelper(Helper):
         logger.info('Loading data')
 
         ### data load
+        # Note: these are the actual statistics for grouped CIFAR with class 0, 3, 5, 8:
+        # Channel 0 mean: 0.436337
+        # Channel 1 mean: 0.433747
+        # Channel 2 mean: 0.426294
+        # Channel 0 sd: 0.289641
+        # Channel 1 sd: 0.286119
+        # Channel 2 sd: 0.299103
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
 
         transform_test = transforms.Compose([
             transforms.ToTensor(),
-            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
 
         minority_keys = self.params['minority_group_keys']
