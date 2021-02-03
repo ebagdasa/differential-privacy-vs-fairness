@@ -206,8 +206,10 @@ class ImageHelper(Helper):
                 minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=True,  download=True, transform=transform_train)
             self.test_dataset = CIFAR10WithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transform_test)
             self.unnormalized_test_dataset = CIFAR10WithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transforms.ToTensor())
 
         elif dataset == 'cifar100':
