@@ -1,7 +1,6 @@
 import logging
 
 from models.word_model import RNNModel
-from text_helper import TextHelper
 
 logger = logging.getLogger('logger')
 
@@ -39,13 +38,7 @@ MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
 
 
 def get_helper(params, d, name):
-    if params.get('model', False) == 'word':
-        helper = TextHelper(current_time=d, params=params, name='text')
-
-        helper.corpus = torch.load(helper.params['corpus'])
-        logger.info(helper.corpus.train.shape)
-    else:
-        helper = ImageHelper(current_time=d, params=params, name=name)
+    helper = ImageHelper(current_time=d, params=params, name=name)
     return helper
 
 
