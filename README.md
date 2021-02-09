@@ -9,10 +9,6 @@ Configure environment by running: `pip install -r requirements.txt`
 
 We use Python3.7 and GPU Nvidia TitanX.
 
-File playing.py allows run the code. It uses `utils/params.yaml` 
-to set parameters from the paper and builds a graph on Tensorboard.
-For Sentiment prediction we use `playing_nlp.py`.
-
 
 Datasets:
 1. MNIST (part of PyTorch)

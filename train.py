@@ -18,11 +18,10 @@ from models.resnet import get_resnet_extractor, get_pretrained_resnet
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm as tqdm
 import yaml
 from utils.text_load import *
-from utils.utils import dict_html, create_table, plot_confusion_matrix
-from inception import *
+from utils.utils import create_table, plot_confusion_matrix
+from models.inception import *
 import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
