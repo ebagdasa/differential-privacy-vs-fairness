@@ -31,11 +31,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
 
-TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist')
+TRIPLET_YIELDING_DATASETS = ('dif', 'celeba', 'lfw', 'mnist', 'cifar10')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
 
 
 def get_helper(params, d, name):
@@ -628,7 +628,7 @@ if __name__ == '__main__':
         # Case: clipping bound S is not specified (no clipping);
         # sigma must be set explicitly in the params.
         sigma = helper.params.get('sigma')
-    alpha = helper.params.get('alpha')
+    alpha = args.alpha
     adaptive_sigma = helper.params.get('adaptive_sigma', False)
     dp = helper.params['dp']
     mu = helper.params['mu']

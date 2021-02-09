@@ -18,9 +18,9 @@ from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from utils.mnist_dataset import MNISTWithAttributesDataset
-from models.simple import SimpleNet
+from utils.cifar_dataset import CIFAR10WithAttributesDataset
 from collections import OrderedDict
-from utils.alpha_mnist import AlphaMNISTDataset
+
 
 POISONED_PARTICIPANT_POS = 0
 
@@ -186,6 +186,13 @@ class ImageHelper(Helper):
         logger.info('Loading data')
 
         ### data load
+        # Note: these are the actual statistics for grouped CIFAR with class 0, 3, 5, 8:
+        # Channel 0 mean: 0.436337
+        # Channel 1 mean: 0.433747
+        # Channel 2 mean: 0.426294
+        # Channel 0 sd: 0.289641
+        # Channel 1 sd: 0.286119
+        # Channel 2 sd: 0.299103
         transform_train = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
@@ -197,11 +204,20 @@ class ImageHelper(Helper):
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
+
+        minority_keys = self.params['minority_group_keys']
+        majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
+
         if dataset == 'cifar10':
-            self.train_dataset = datasets.CIFAR10('./data', train=True, download=True,
-                                                  transform=transform_train)
-            self.test_dataset = datasets.CIFAR10('./data', train=False,
-                                                 transform=transform_test)
+            self.train_dataset = CIFAR10WithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=True,  download=True, transform=transform_train)
+            self.test_dataset = CIFAR10WithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=False, transform=transform_test)
+            self.unnormalized_test_dataset = CIFAR10WithAttributesDataset(
+                minority_keys=minority_keys, majority_keys=majority_keys,
+                root='../data', train=False, transform=transforms.ToTensor())
 
         elif dataset == 'cifar100':
             self.train_dataset = datasets.CIFAR100('./data', train=True, download=True,
@@ -209,8 +225,6 @@ class ImageHelper(Helper):
 
             self.test_dataset = datasets.CIFAR100('./data', train=False, transform=transform_test)
         elif dataset == 'mnist':
-            minority_keys = self.params['minority_group_keys']
-            majority_keys = list(set(labels_mapping.keys()) - set(minority_keys))
             self.train_dataset = MNISTWithAttributesDataset(
                 minority_keys=minority_keys, majority_keys=majority_keys,
 
@@ -228,27 +242,27 @@ class ImageHelper(Helper):
                 minority_keys=minority_keys, majority_keys=majority_keys,
                 root='../data', train=False, transform=transforms.ToTensor())
 
-            if classes_to_keep:
-                # Filter the training data to only contain the specified classes.
-                print("[DEBUG] data start size: {} train / {} test".format(
-                    len(self.train_dataset), len(self.test_dataset)))
-                self.train_dataset.apply_classes_to_keep(classes_to_keep)
-                self.test_dataset.apply_classes_to_keep(classes_to_keep)
-                self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
+        if classes_to_keep:
+            # Filter the training data to only contain the specified classes.
+            print("[DEBUG] data start size: {} train / {} test".format(
+                len(self.train_dataset), len(self.test_dataset)))
+            self.train_dataset.apply_classes_to_keep(classes_to_keep)
+            self.test_dataset.apply_classes_to_keep(classes_to_keep)
+            self.unnormalized_test_dataset.apply_classes_to_keep(classes_to_keep)
 
-                # Apply alpha-balancing to the training data only.
-                fixed_n_train = self.params.get('fixed_n_train')
-                self.train_dataset = apply_alpha_to_dataset(
-                    self.train_dataset, alpha, minority_keys=minority_keys,
-                    majority_keys=majority_keys, n_train=fixed_n_train)
+            # Apply alpha-balancing to the training data only.
+            fixed_n_train = self.params.get('fixed_n_train')
+            self.train_dataset = apply_alpha_to_dataset(
+                self.train_dataset, alpha, minority_keys=minority_keys,
+                majority_keys=majority_keys, n_train=fixed_n_train)
 
-                print("[DEBUG] data after filtering/alpha-balancing size: "
-                      "{} train / {} test".format(len(self.train_dataset),
-                                                  len(self.test_dataset)))
-                print("[DEBUG] unique train labels: {}".format(
-                    self.train_dataset.targets.unique()))
-                print("[DEBUG] unique test labels: {}".format(
-                    self.test_dataset.targets.unique()))
+            print("[DEBUG] data after filtering/alpha-balancing size: "
+                  "{} train / {} test".format(len(self.train_dataset),
+                                              len(self.test_dataset)))
+            print("[DEBUG] unique train labels: {}".format(
+                self.train_dataset.targets.unique()))
+            print("[DEBUG] unique test labels: {}".format(
+                self.test_dataset.targets.unique()))
 
 
         self.dataset_size = len(self.train_dataset)
@@ -609,7 +623,7 @@ class ImageHelper(Helper):
 
     def get_num_classes(self, classes_to_keep):
         if self.params['dataset'] == 'cifar10':
-            num_classes = 10
+            num_classes = len(classes_to_keep)
         elif self.params['dataset'] == 'cifar100':
             num_classes = 100
         elif ('mnist' in self.params['dataset']) and classes_to_keep:
