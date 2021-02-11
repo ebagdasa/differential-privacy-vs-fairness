@@ -7,3 +7,6 @@ saved_models/
 data/
 __pycache__
 *.pdf
+*.png
+.ipynb_checkpoints
+venv
