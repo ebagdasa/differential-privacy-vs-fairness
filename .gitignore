@@ -6,3 +6,4 @@ runs/
 saved_models/
 data/
 __pycache__
+*.pdf
