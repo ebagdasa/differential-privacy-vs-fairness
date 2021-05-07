@@ -42,7 +42,7 @@ def get_celeba_transforms(partition: str, normalize: bool = True):
     rotate = transforms.RandomRotation(degrees=30)
     random_crop = transforms.RandomCrop(crop_size)  # Crops the training image
     flip_aug = transforms.RandomHorizontalFlip()
-    normalize = transforms.Normalize(mean=mu_data, std=std_data)
+    normalize_transf = transforms.Normalize(mean=mu_data, std=std_data)
     center_crop = transforms.CenterCrop(crop_size)  # Crops the test image
 
     transform_train = transforms.Compose([
@@ -50,12 +50,12 @@ def get_celeba_transforms(partition: str, normalize: bool = True):
         rotate, random_crop,
         flip_aug,
         transforms.ToTensor(),
-        normalize
+        normalize_transf
     ])
 
     transform_test = transforms.Compose([crop_to_sq, resize, center_crop,
                                          transforms.ToTensor(),
-                                         normalize])
+                                         normalize_transf])
     transform_test_unnormalized = transforms.Compose([crop_to_sq, resize, center_crop,
                                                       transforms.ToTensor()])
     if partition == 'train':
