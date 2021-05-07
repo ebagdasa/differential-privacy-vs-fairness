@@ -668,8 +668,14 @@ if __name__ == '__main__':
     writer.add_text('Model Params', table)
     logger.info(table)
     logger.info(helper.labels)
-    epoch = 0
     metric_name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
+
+    epoch = 0
+    test_loss = test(net, epoch, name, helper.test_loader,
+                     mse=metric_name == 'mse',
+                     labels_mapping=true_labels_to_binary_labels)
+    helper.save_model(net, epoch, test_loss)
+
     for epoch in range(helper.start_epoch,
                        epochs):  # loop over the dataset multiple times
         if dp:
@@ -684,7 +690,6 @@ if __name__ == '__main__':
         test_loss = test(net, epoch, name, helper.test_loader,
                          mse=metric_name == 'mse',
                          labels_mapping=true_labels_to_binary_labels)
-
         helper.save_model(net, epoch, test_loss)
     logger.info(
         f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
