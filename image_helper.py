@@ -18,7 +18,7 @@ from utils.dif_dataset import DiFDataset
 from utils.celeba_dataset import CelebADataset, get_celeba_transforms
 from utils.lfw_dataset import LFWDataset, get_lfw_transforms
 from utils.mnist_dataset import MNISTWithAttributesDataset
-from utils.cifar_dataset import CIFAR10WithAttributesDataset
+from utils.mc10_dataset import CIFAR10WithAttributesDataset
 from collections import OrderedDict
 
 
