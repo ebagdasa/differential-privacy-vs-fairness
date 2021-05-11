@@ -275,13 +275,15 @@ class ImageHelper(Helper):
     def create_loaders(self):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
-                                                        drop_last=True)
+                                                        drop_last=True,
+                                                        pin_memory=True)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
-                                                       )
+                                                       pin_memory=True)
         if hasattr(self, 'unnormalized_test_dataset'):
             self.unnormalized_test_loader = torch.utils.data.DataLoader(
-                self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'])
+                self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
+            pin_memory=True)
 
     def load_faces_data(self):
 
