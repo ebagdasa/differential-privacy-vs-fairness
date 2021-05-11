@@ -1,3 +1,4 @@
+*.sketch
 *.Rhistory
 .idea/
 *.iml
