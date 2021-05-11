@@ -73,7 +73,7 @@ read_data <- function(dirname, loss_group){
 # loss_group: the group defined by a valid tag, e.g.: tag-test_loss_per_{loss_group}_
 read_data_2 <- function(dirname, loss_group){
   tmp = list()
-  for (f in list.files(dirname, full.names = TRUE)){
+  for (f in list.files(dirname, full.names = TRUE, pattern = ".*loss_per_attr_\\d.csv$")){
     df = read.csv(f)
     df$uid = f
     
@@ -90,16 +90,22 @@ read_data_2 <- function(dirname, loss_group){
   }
   results = dplyr::bind_rows(tmp) 
   results$dp_str = factor(tidyr::replace_na(results$z, 0))
+  warning("[INFO]: ignoring results for DP runs except: (NoDP; DPSGDS1z0.8)")
   levels(results$dp_str) <- c("NoDP", "DPSGDS1z0.8", "DPSGDS1z1")
+  epochs = max(results$Step)
   results <- results %>%
-    dplyr::filter(Step == 59) %>%
+    dplyr::filter(Step == epochs) %>%
+    dplyr::filter(dp_str == "NoDP" | dp_str=="DPSGDS1z0.8") %>%
     select(c("Value", "alpha", "test_class", "dp_str")) %>%
     tidyr::pivot_wider(id_cols=c(alpha, test_class),  names_from=dp_str, values_from=Value) %>%
-    dplyr::mutate(dp_nodp_diff8=DPSGDS1z0.8-NoDP, dp_nodp_diff1=DPSGDS1z1-NoDP) %>%
+    dplyr::mutate(dp_nodp_diff=DPSGDS1z0.8-NoDP) %>%
     # Create a column for Loss(w_hat_DP) - Loss(w_hat_noDP)
-    tidyr::pivot_wider(id_cols=c(alpha), names_from=test_class, values_from=c(dp_nodp_diff8, dp_nodp_diff1)) %>%
+    tidyr::pivot_wider(id_cols=c(alpha), names_from=test_class, values_from=dp_nodp_diff, names_prefix = "dp_nodp_diff8_") %>%
     # Create the column for phi
-    dplyr::mutate(phi8 = dp_nodp_diff8_0/dp_nodp_diff8_1, phi1 = dp_nodp_diff1_0/dp_nodp_diff1_1)
+    dplyr::mutate(phi8_01 = dp_nodp_diff8_0/dp_nodp_diff8_1) %>%
+    dplyr::mutate(phi8_10 = dp_nodp_diff8_1/dp_nodp_diff8_0) %>%
+    dplyr::mutate(phimax8 = pmax(phi8_01, phi8_10)) %>%
+    dplyr::mutate(alpha = as.numeric(alpha))
   
   return(results)
 }

@@ -81,3 +81,30 @@ ggplot(results, aes(x=uid, y = value, fill = metric)) +
   ) +
   ggtitle("Subgroup Loss vs. Model Type and Training Subset") +
   scale_fill_manual(values=c("#0072B2", "#E69F00", "#56B4E9"))
+
+# For the No-DP plot, we change the "majority" group to match our definition,
+# which should be the group which has lowest expected loss.
+
+results_nodp <- results %>%
+  dplyr::filter(uid == "No DP")
+tmp <- results_nodp[results_nodp$metric == "Majority" & results_nodp$train_subset == "Union", "value"] %>% dplyr::pull()
+results_nodp[results_nodp$metric == "Majority" & results_nodp$train_subset == "Union", "value"] <- results_nodp[results_nodp$metric == "Minority" & results_nodp$train_subset == "Union", "value"] %>% dplyr::pull()
+results_nodp[results_nodp$metric == "Minority" & results_nodp$train_subset == "Union", "value"] <- tmp
+results_nodp %>%
+  ggplot(aes(x=train_subset, y = value, fill = metric)) + 
+  geom_bar(stat="identity", position="dodge", colour="black") +
+  labs(fill = "Test Subset",
+       caption = TeX("Celeba Dataset; Minority/Majority Attribute Label = Blond Hair $(\\alpha = 0.852)$")) +
+  ylab("Loss") + 
+  xlab("Training Subset") + 
+  theme_bw() +
+  theme(plot.title=element_text(hjust=0.5, size=rel(1.5)),
+        axis.title = element_text(size=rel(1.5)),
+        legend.text = element_text(size=rel(1.25)),
+        legend.title = element_text(size=rel(1.25)),
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank()
+  ) +
+  ggtitle("Subgroup Loss vs. Training Subset") +
+  scale_fill_manual(values=c("#0072B2", "#E69F00", "#56B4E9"))
+ggsave("celeba_subset_loss_nodp.pdf", width=5.5, height=3.5, device="pdf")
