@@ -4,7 +4,7 @@ num_microbatches: 256
 lr: 0.01
 momentum: 0.5
 decay: 0
-S: 1
+S: inf
 z: 0.8
 dp: True
 epochs: 120
