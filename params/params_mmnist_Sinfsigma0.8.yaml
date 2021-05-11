@@ -8,8 +8,7 @@ decay: 0
 # Instead of computing the noise variance sigma = z * S,
 # since we are not using clipping (S is undefined/infinite),
 # we can explicitly set sigma.
-S: None
-#z: 0.8
+S: inf
 sigma: 0.8
 dp: True
 epochs: 120
