@@ -211,12 +211,12 @@ def make_uid(params, args):
     number_of_entries_train = args.number_of_entries_train
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    uid = "{dataset}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{adaptive_sigma}-dp{dp}-n{n}-{model}".format(
-        dataset=params['dataset'],
+    uid = "{ds}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{ada}-dp{dp}-n{n}-{model}".format(
+        ds=params['dataset'],
         S=params.get('S'),
         z=params.get('z'),
         sigma=params.get('sigma'), alpha=params.get('alpha'),
-        adaptive_sigma=params.get('adaptive_sigma', False),
+        ada=params.get('adaptive_sigma', False),
         dp=str(params['dp']),
         n=number_of_entries_train,
         model=params['model'])
