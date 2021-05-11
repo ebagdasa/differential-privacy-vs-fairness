@@ -674,7 +674,6 @@ if __name__ == '__main__':
     test_loss = test(net, epoch, name, helper.test_loader,
                      mse=metric_name == 'mse',
                      labels_mapping=true_labels_to_binary_labels)
-    helper.save_model(net, epoch, test_loss)
 
     for epoch in range(helper.start_epoch,
                        epochs):  # loop over the dataset multiple times
