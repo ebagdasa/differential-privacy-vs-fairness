@@ -463,8 +463,10 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
             grad_vec = helper.get_grad_vec(model, device)
             grad_vecs.append(grad_vec)
-
+            print("norm_before: {}".format(torch.norm(model.parameters(), p=2)))
             total_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), S)
+            print("norm after: {}".format(torch.norm(model.parameters(), p=2)))
+            import ipdb;ipdb.set_trace()  # TODO: check whether we can set S=None and achieve no clipping.
             label_norms[int(labels[pos])].append(total_norm)
 
             for tensor_name, tensor in model.named_parameters():
