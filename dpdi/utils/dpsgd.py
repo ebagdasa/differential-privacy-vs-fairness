@@ -51,7 +51,7 @@ def compute_L_and_k(X, y, w_star, n, T, delta):
     return L_1, L_2, L_3, k
 
 
-def compute_sigma_dp(L_1, L_2, L_3, k, delta, eps):
+def compute_sigma_dp(L_1, L_2, L_3, k, delta, eps: float, n: int):
     """Compute sigma_DP."""
     sigma_dp = (2 * (L_2 * L_3 + L_1 * L_3 ** 2)
                 * sqrt(2 * ln(1.25 * 2 * k / delta))
@@ -97,7 +97,7 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, d=2):
     n = len(X)
     # Compute the various constants needed for the algorithm.
     L_1, L_2, L_3, k = compute_L_and_k(X, y, w_star, n, T, delta)
-    sigma_dp = compute_sigma_dp(L_1, L_2, L_3, k=k, delta=delta, eps=eps)
+    sigma_dp = compute_sigma_dp(L_1, L_2, L_3, k=k, delta=delta, eps=eps, n=n)
     if verbose:
         print_dpsgd_diagnostics(L_1, L_2, L_3, k=k, sigma_dp=sigma_dp, n=n, delta=delta)
 
