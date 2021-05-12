@@ -41,7 +41,7 @@ def get_helper(params, d, name):
     return helper
 
 
-def maybe_override_parameter(params:dict, args, parameter_name):
+def maybe_override_parameter(params: dict, args, parameter_name: str):
     """Optionally overrides a parameter using a command-line argument of the same name."""
     val = getattr(args, parameter_name, None)
     if val is not None:
@@ -587,9 +587,9 @@ if __name__ == '__main__':
                         help="Optional argument to the train_attribute_subset param; this"
                         "overrides any value which may be present for that field in the"
                         "parameters yaml file.")
-    parser.add_argument("--sigma", "Optional argument to override sigma in params.",
+    parser.add_argument("--sigma", help="Optional argument to override sigma in params.",
                         default=None, type=float)
-    parser.add_argument("--epochs", "Optional argument to override epochs in params.",
+    parser.add_argument("--epochs", help="Optional argument to override epochs in params.",
                         default=None, type=int)
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
