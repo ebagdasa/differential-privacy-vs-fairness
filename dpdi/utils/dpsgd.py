@@ -82,6 +82,18 @@ def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array
     return metrics
 
 
+def compute_rho_lr(H_min: np.array, H_maj: np.array, alpha, sigma_dp, sigma_noise=1.):
+    """Compute the quantity defined as \rho_{LR} in the paper."""
+    H = alpha * H_maj + (1 - alpha) * H_min
+    H_inv = np.linalg.pinv(H)
+    H_minus2 = np.matmul(H_inv, H_inv)
+    rho_lr = (
+            np.trace((H_min - H_maj) @ H_minus2) * sigma_dp ** 2
+            / (np.trace((H_min - H_maj) @ H_inv) * sigma_noise ** 2)
+    )
+    return rho_lr
+
+
 def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
     """Print various important quantities used to compute sigma_DP."""
     print(f"L_1 = {L_1}; L_2 = {L_2}; L_3 = {L_3}")
