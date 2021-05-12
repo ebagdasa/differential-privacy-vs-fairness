@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch.autograd import Variable
 import torch
-from models.simple import SimpleNet
+from dpdi.models.simple import SimpleNet
 
 
 class RNNModel(nn.Module):

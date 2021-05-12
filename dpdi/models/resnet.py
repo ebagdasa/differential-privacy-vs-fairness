@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torchvision.models as models
 
-from models.simple import SimpleNet
+from dpdi.models.simple import SimpleNet
 
 
 def get_resnet_extractor(num_classes, freeze_pretrained_weights:bool):

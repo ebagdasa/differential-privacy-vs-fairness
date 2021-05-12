@@ -4,7 +4,7 @@ See the paper "ShuffleNet: An Extremely Efficient Convolutional Neural Network f
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from models.simple import SimpleNet
+from dpdi.models.simple import SimpleNet
 
 
 class ShuffleBlock(nn.Module):

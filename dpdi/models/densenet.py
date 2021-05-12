@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torchvision.models as models
 
-from models.simple import SimpleNet
+from dpdi.models.simple import SimpleNet
 import torch
 import torch.nn.functional as F
 import math
