@@ -48,7 +48,7 @@ def maybe_override_parameter(params: dict, args, parameter_name: str):
         print(
             "[INFO] overriding parameter {} from params file to value {} from args"\
                 .format(parameter_name, val))
-        setattr(params, parameter_name, val)
+        params[parameter_name] = val
     return
 
 
