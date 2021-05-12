@@ -9,16 +9,16 @@ import torchvision
 import os
 import torch.utils.data
 
-from helper import Helper
+from dpdi.helper import Helper
 import random
 
 from torchvision import datasets, transforms
 import numpy as np
-from utils.dif_dataset import DiFDataset
-from utils.celeba_dataset import CelebADataset, get_celeba_transforms
-from utils.lfw_dataset import LFWDataset, get_lfw_transforms
-from utils.mnist_dataset import MNISTWithAttributesDataset
-from utils.mc10_dataset import CIFAR10WithAttributesDataset
+from dpdi.datasets.dif_dataset import DiFDataset
+from dpdi.datasets.celeba_dataset import CelebADataset, get_celeba_transforms
+from dpdi.datasets.lfw_dataset import LFWDataset, get_lfw_transforms
+from dpdi.datasets.mnist_dataset import MNISTWithAttributesDataset
+from dpdi.datasets.mc10_dataset import CIFAR10WithAttributesDataset
 from collections import OrderedDict
 
 

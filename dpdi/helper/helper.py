@@ -71,7 +71,7 @@ class Helper:
             p.grad.data.mul_(clip_coef)
 
     def compute_rdp(self, sigma):
-        from compute_dp_sgd_privacy import apply_dp_sgd_analysis
+        from dpdi.utils.compute_dp_sgd_privacy import apply_dp_sgd_analysis
 
         N = self.dataset_size
         logger.info(f'Dataset size: {N}. Computing RDP guarantees.')

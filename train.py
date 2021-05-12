@@ -1,6 +1,6 @@
 import logging
 
-from models.word_model import RNNModel
+from dpdi.models.word_model import RNNModel
 
 logger = logging.getLogger('logger')
 
@@ -10,18 +10,18 @@ from scipy import ndimage
 from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
-from models.mobilenet import MobileNetV2
+from dpdi.models.mobilenet import MobileNetV2
 from image_helper import ImageHelper
-from models.densenet import DenseNet
-from models.simple import Net, FlexiNet, reseed, RegressionNet
-from models.resnet import get_resnet_extractor, get_pretrained_resnet
+from dpdi.models.densenet import DenseNet
+from dpdi.models.simple import Net, FlexiNet, reseed, RegressionNet
+from dpdi.models.resnet import get_resnet_extractor, get_pretrained_resnet
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import yaml
-from utils.text_load import *
-from utils.utils import create_table, plot_confusion_matrix
-from models.inception import *
+from dpdi.utils.text_load import *
+from dpdi.utils.utils import create_table, plot_confusion_matrix
+from dpdi.models.inception import *
 import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
