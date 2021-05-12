@@ -11,7 +11,7 @@ from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
 from dpdi.models.mobilenet import MobileNetV2
-from image_helper import ImageHelper
+from dpdi.helper.image_helper import ImageHelper
 from dpdi.models.densenet import DenseNet
 from dpdi.models.simple import Net, FlexiNet, reseed, RegressionNet
 from dpdi.models.resnet import get_resnet_extractor, get_pretrained_resnet
