@@ -42,7 +42,7 @@ def build_dataset(H_min, H_maj, mu, n: int, alpha: float, w_star: np.ndarray,
     return X, g, y
 
 
-def compute_L_and_k(X, y, w_star, n, T):
+def compute_L_and_k(X, y, w_star, n, T, delta):
     c = 2  # TODO:confirm value of c.
     L_1 = np.linalg.norm(X, axis=1, ord=2).max()
     L_2 = np.abs(y).max()
@@ -92,11 +92,11 @@ def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
     print("sigma_dp: %f" % sigma_dp)
 
 
-def dp_sgd(X, y, T, delta, eps, s, lr, verbose=True, d=2):
+def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, d=2):
     """Implements Algorithm 1 (DP-SGD)."""
     n = len(X)
     # Compute the various constants needed for the algorithm.
-    L_1, L_2, L_3, k = compute_L_and_k(X, y, w_star, n, T)
+    L_1, L_2, L_3, k = compute_L_and_k(X, y, w_star, n, T, delta)
     sigma_dp = compute_sigma_dp(L_1, L_2, L_3, k=k, delta=delta, eps=eps)
     if verbose:
         print_dpsgd_diagnostics(L_1, L_2, L_3, k=k, sigma_dp=sigma_dp, n=n, delta=delta)
