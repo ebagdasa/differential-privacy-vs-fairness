@@ -41,6 +41,17 @@ def get_helper(params, d, name):
     return helper
 
 
+def maybe_override_parameter(params:dict, args, parameter_name):
+    """Optionally overrides a parameter using a command-line argument of the same name."""
+    val = getattr(args, parameter_name, None)
+    if val is not None:
+        print(
+            "[INFO] overriding parameter {} from params file to value {} from args"\
+                .format(parameter_name, val))
+        setattr(params, parameter_name, val)
+    return
+
+
 def get_optimizer(helper):
     if helper.params['optimizer'] == 'SGD':
         optimizer = optim.SGD(net.parameters(), lr=lr, momentum=momentum,
@@ -576,16 +587,19 @@ if __name__ == '__main__':
                         help="Optional argument to the train_attribute_subset param; this"
                         "overrides any value which may be present for that field in the"
                         "parameters yaml file.")
+    parser.add_argument("--sigma", "Optional argument to override sigma in params.",
+                        default=None, type=float)
+    parser.add_argument("--epochs", "Optional argument to override epochs in params.",
+                        default=None, type=int)
     args = parser.parse_args()
     d = datetime.now().strftime('%b.%d_%H.%M.%S')
 
     with open(args.params) as f:
         params = yaml.load(f)
 
-    if args.train_attribute_subset is not None:
-        print("[INFO] overriding train_attribute_subset with value from command: {}"
-              .format(args.train_attribute_subset))
-        params['train_attribute_subset'] = args.train_attribute_subset
+    for pname in ("train_attribute_subset", 'sigma', 'epochs'):
+        maybe_override_parameter(params, args, pname)
+
     name = make_uid(params, args)
 
     writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
