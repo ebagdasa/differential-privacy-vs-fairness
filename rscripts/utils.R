@@ -37,7 +37,7 @@ base_breaks <- function(n = 10){
 }
 
 
-# Read the TensorBoard results CSV files, keeping only the final (59th iteration)
+# Read the TensorBoard results CSV files, keeping only the final iteration
 # dirname: the directory to read from.
 # loss_group: the group defined by a valid tag, e.g.: tag-test_loss_per_{loss_group}_
 read_data <- function(dirname, loss_group){
@@ -47,9 +47,10 @@ read_data <- function(dirname, loss_group){
     df$uid = f
     
     # Casting of string "None" to numeric will produce "Warning message: NAs introduced by coercion"
-    # which can be safely ignored
-    df$S = as.numeric(sub("-S", "", stringr::str_extract(f, "-S[a-zA-Z0-9\\.]+")))
-    df$z = as.numeric(sub("-z", "", stringr::str_extract(f, "-z[a-zA-Z0-9\\.]+")))
+    # which can be safely ignored, so we suppress this warning.
+    df$S = suppressWarnings(as.numeric(sub("-S", "", stringr::str_extract(f, "-S[a-zA-Z0-9\\.]+"))))
+    df$z = suppressWarnings(as.numeric(sub("-z", "", stringr::str_extract(f, "-z[a-zA-Z0-9\\.]+"))))
+    df$sigma = suppressWarnings(as.numeric(sub("-sigma", "", stringr::str_extract(f, "-sigma[a-zA-Z0-9\\.]+"))))
     
     df$dp = as.logical(sub("-dp", "", stringr::str_extract(f, "-dp[a-zA-Z]+")))
     df$alpha = sub("alpha", "", stringr::str_extract(f, "alpha\\d\\.\\d+"))
@@ -57,14 +58,18 @@ read_data <- function(dirname, loss_group){
                         stringr::str_extract(f, glue("tag-test_loss_per_{loss_group}_[01]")))
     tmp[[f]] = df
   }
-  results = dplyr::bind_rows(tmp) %>% 
-    dplyr::filter(Step == 59) %>%
-    select(c("Value", "alpha", "dp", "S", "z", "test_class")) %>%
-    tidyr::pivot_wider(id_cols=c(alpha, dp, S, z), 
+  results = suppressWarnings(dplyr::bind_rows(tmp))
+  maxstep = max(results$Step)
+  results = results %>%
+    dplyr::filter(Step == maxstep) %>%
+    select(c("Value", "alpha", "dp", "S", "z", "sigma", "test_class")) %>%
+    tidyr::pivot_wider(id_cols=c(alpha, dp, S, z, sigma), 
                        names_from=test_class, values_from=Value) %>%
     dplyr::rename("L_0"="0", "L_1"="1")
-  results$dp_str = factor(tidyr::replace_na(results$z, 0))
-  levels(results$dp_str) <- c("No DP", "DP-SGD, S = 1, z = 0.8", "DP-SGD, S = 1, z = 1")
+  results$dp_str <- do.call(paste0, list("DP", results$dp, 
+                                         "S", results$S, 
+                                         "z", results$z, "sigma", results$sigma))
+  # levels(results$dp_str) <- c("No DP", "DP-SGD, S = 1, z = 0.8", "DP-SGD, S = 1, z = 1")
   return(results)
 }
 
