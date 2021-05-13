@@ -16,7 +16,14 @@ def build_loader(X, y, batch_size=64):
     return loader
 
 
-def build_dataset(H_min, H_maj, mu, n: int, alpha: float, w_star: np.ndarray,
+def scalar_to_square_ary(a):
+    """Utility function to give a scalar a square shape."""
+    assert len(a) == 1
+    assert np.ndim(a) == 1
+    return a.reshape(1, 1)
+
+
+def build_dataset(H_min, H_maj, mu_min, mu_maj, n: int, alpha: float, w_star: np.ndarray,
                   sd_eta: float = 1., verbose=True):
     """
     Build a dataset according to the parameters.
@@ -27,14 +34,18 @@ def build_dataset(H_min, H_maj, mu, n: int, alpha: float, w_star: np.ndarray,
     sd_eta: sd of the noise in the model, such that y = x^T w_star + eta.
     """
     assert 0 < alpha < 1
+    assert (H_min.shape == H_maj.shape) and (mu_min.shape == mu_maj.shape)
     n_maj = int(alpha * n)
     n_min = n - n_maj
     if verbose:
         print(f"[INFO] built dataset with alpha={alpha}, n_maj={n_maj}, n_min={n_min}")
     rng = default_rng()
     eta = rng.normal(0., sd_eta, n)
-    X_min = rng.multivariate_normal(mu, H_min, n_min)
-    X_maj = rng.multivariate_normal(mu, H_maj, n_maj)
+    if np.ndim(H_min) == 1:
+        H_min = scalar_to_square_ary(H_min)
+        H_maj = scalar_to_square_ary(H_maj)
+    X_min = rng.multivariate_normal(mu_min, H_min, n_min)
+    X_maj = rng.multivariate_normal(mu_maj, H_maj, n_maj)
     X = np.vstack((X_min, X_maj))
     # The ith entry in g is zero if the ith element of X is from minority; otherwise one.
     g = np.concatenate((np.zeros(n_min), np.ones(n_maj)))
