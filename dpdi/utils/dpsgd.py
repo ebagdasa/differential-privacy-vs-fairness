@@ -16,12 +16,12 @@ def build_loader(X, y, batch_size=64):
     return loader
 
 
-def scalar_to_square_ary(a: np.array) -> np.array:
+def maybe_cast_scalar_to_square_ary(a: np.array) -> np.array:
     """Utility function to give a scalar a square shape."""
-    assert len(a) == 1
-    assert np.ndim(a) == 1
-    return a.reshape(1, 1)
-
+    if len(a) == 1 and np.ndim(a) == 1:
+        return a.reshape(1, 1)
+    else:
+        return a
 
 def build_dataset(H_min: np.array, H_maj: np.array, mu_min: np.array, mu_maj: np.array,
                   n: int, alpha: float, w_star: np.ndarray,
@@ -42,9 +42,9 @@ def build_dataset(H_min: np.array, H_maj: np.array, mu_min: np.array, mu_maj: np
         print(f"[INFO] built dataset with alpha={alpha}, n_maj={n_maj}, n_min={n_min}")
     rng = default_rng()
     eta = rng.normal(0., sd_eta, n)
-    if np.ndim(H_min) == 1:
-        H_min = scalar_to_square_ary(H_min)
-        H_maj = scalar_to_square_ary(H_maj)
+
+    H_min = maybe_cast_scalar_to_square_ary(H_min)
+    H_maj = maybe_cast_scalar_to_square_ary(H_maj)
     X_min = rng.multivariate_normal(mu_min, H_min, n_min)
     X_maj = rng.multivariate_normal(mu_maj, H_maj, n_maj)
     X = np.vstack((X_min, X_maj))
@@ -96,6 +96,8 @@ def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array
 
 def compute_rho_lr(H_min: np.array, H_maj: np.array, alpha, sigma_dp, sigma_noise=1.):
     """Compute the quantity defined as \rho_{LR} in the paper."""
+    H_min = maybe_cast_scalar_to_square_ary(H_min)
+    H_maj = maybe_cast_scalar_to_square_ary(H_maj)
     H = alpha * H_maj + (1 - alpha) * H_min
     H_inv = np.linalg.pinv(H)
     H_minus2 = np.matmul(H_inv, H_inv)
