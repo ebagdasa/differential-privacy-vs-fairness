@@ -16,14 +16,15 @@ def build_loader(X, y, batch_size=64):
     return loader
 
 
-def scalar_to_square_ary(a):
+def scalar_to_square_ary(a: np.array) -> np.array:
     """Utility function to give a scalar a square shape."""
     assert len(a) == 1
     assert np.ndim(a) == 1
     return a.reshape(1, 1)
 
 
-def build_dataset(H_min, H_maj, mu_min, mu_maj, n: int, alpha: float, w_star: np.ndarray,
+def build_dataset(H_min: np.array, H_maj: np.array, mu_min: np.array, mu_maj: np.array,
+                  n: int, alpha: float, w_star: np.ndarray,
                   sd_eta: float = 1., verbose=True):
     """
     Build a dataset according to the parameters.
