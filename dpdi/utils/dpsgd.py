@@ -23,6 +23,7 @@ def maybe_cast_scalar_to_square_ary(a: np.array) -> np.array:
     else:
         return a
 
+
 def build_dataset(H_min: np.array, H_maj: np.array, mu_min: np.array, mu_maj: np.array,
                   n: int, alpha: float, w_star: np.ndarray,
                   sd_eta: float = 1., verbose=True):
@@ -118,9 +119,10 @@ def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
     print("sigma_dp: %f" % sigma_dp)
 
 
-def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, d=2):
+def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64):
     """Implements Algorithm 1 (DP-SGD)."""
-    n = len(X)
+    n, d = X.shape
+    assert d == len(w_star), "shape mismatch between X and w_star"
     # Compute the various constants needed for the algorithm.
     L_1, L_2, L_3, k = compute_L_and_k(X, y, w_star, n, T, delta)
     sigma_dp = compute_sigma_dp(L_1, L_2, L_3, k=k, delta=delta, eps=eps, n=n)
@@ -128,7 +130,7 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, d=2):
         print_dpsgd_diagnostics(L_1, L_2, L_3, k=k, sigma_dp=sigma_dp, n=n, delta=delta)
 
     # Initialization
-    loader = build_loader(X, y)
+    loader = build_loader(X, y, batch_size)
     t = 0
     w_hat = torch.zeros(size=(d,), dtype=torch.double)
     w_hat.requires_grad = True
@@ -165,8 +167,8 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, d=2):
             if t >= T:
                 print("[INFO] completed %s iterations of SGD." % t)
                 break
-    w_hat = np.vstack(iterates[-(T - s):]).mean(axis=0)
-    return iterates, losses, w_hat
+    w_hat_bar = np.vstack(iterates[-(T - s):]).mean(axis=0)
+    return iterates, losses, w_hat_bar
 
 
 def vanilla_sgd(loader, T, lr, d=2, verbose=True):
