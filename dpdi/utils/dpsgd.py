@@ -8,11 +8,11 @@ from math import log as ln
 from numpy.random import default_rng
 
 
-def build_loader(X, y, batch_size=64):
+def build_loader(X, y, batch_size=64, shuffle=False):
     inputs = torch.from_numpy(X).double()
     targets = torch.from_numpy(y).double()
     train_ds = torch.utils.data.TensorDataset(inputs, targets)
-    loader = torch.utils.data.DataLoader(train_ds, batch_size=batch_size)
+    loader = torch.utils.data.DataLoader(train_ds, batch_size=batch_size, shuffle=shuffle)
     return loader
 
 
@@ -119,8 +119,10 @@ def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
     print("sigma_dp: %f" % sigma_dp)
 
 
-def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64):
-    """Implements Algorithm 1 (DP-SGD)."""
+def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
+           random_seed=983445):
+    """Implements Algorithm 1 (DP-SGD), with fixed seed for reproducibility."""
+    torch.manual_seed(random_seed)
     n, d = X.shape
     assert d == len(w_star), "shape mismatch between X and w_star"
     # Compute the various constants needed for the algorithm.
