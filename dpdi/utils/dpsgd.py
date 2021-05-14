@@ -6,8 +6,20 @@ import torch
 from math import sqrt
 from math import log as ln
 from numpy.random import default_rng
+from sklearn.linear_model import LinearRegression
 
 RANDOM_SEED = 983445
+
+
+def get_wstar(df):
+    """Compute the parameters via OLS (with no intercept term).
+
+    If an intercept term is desired, add an 'intercept' column to the
+        design matrix of all ones.
+    """
+    lr = LinearRegression(fit_intercept=False)\
+    .fit(X=df.drop(['sensitive', 'target'],axis=1), y=df['target'])
+    return lr.coef_
 
 
 def compute_mse(X, y, w_hat):
