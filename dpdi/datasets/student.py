@@ -26,12 +26,14 @@ def load_student_dataset(root_dir="../data/student"):
         if ('_no' in x) or ('_other' in x):
             del data[x]
     # Set baselines for other categorical columns.
-    del data['sex_M']
+    del data['sex_F']
     del data['Pstatus_A']
     del data['famsize_LE3']
     del data['address_U']
     del data['school_GP']
-    data.rename(columns={'sex_F': 'sensitive'}, inplace=True)
+    # The sensitive column is '1' for males, '0' for females, which matches our
+    #  indexing of the majority vs. minority groups.
+    data.rename(columns={'sex_M': 'sensitive'}, inplace=True)
 
     print(data.columns)
 
