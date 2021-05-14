@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 
-def load_law_dataset(sensitive, root_dir="../data/ucla-law-school"):
+def load_law_dataset(sensitive, root_dir="../data/ucla-law-school", normalize=True):
     """Reads the law school dataset, as in (Khani et al. 2020).
 
     Adapted from
@@ -27,7 +27,8 @@ def load_law_dataset(sensitive, root_dir="../data/ucla-law-school"):
         data.rename(columns={'race': 'sensitive'}, inplace=True)
 
     data.rename(columns={'zgpa': 'target'}, inplace=True)
-    for x in data.columns:
-        if x != 'sensitive':
-            data[x] = (data[x] - np.mean(data[x])) / np.std(data[x])
+    if normalize:
+        for x in data.columns:
+            if x != 'sensitive':
+                data[x] = (data[x] - np.mean(data[x])) / np.std(data[x])
     return data
