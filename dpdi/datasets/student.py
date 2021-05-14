@@ -9,13 +9,6 @@ def load_student_dataset(root_dir="../data/student"):
     https://worksheets.codalab.org/rest/bundles/0xff62528c13b84510b7f10562f21be280
     /contents/blob/data_preprocess/student.py
     """
-    #     mat_df = pd.read_csv(os.path.join(root_dir, "student", "student-mat.csv"),
-    #     delimiter=";")
-    #     mat_df["course"] = "mat"
-    #     por_df = pd.read_csv(os.path.join(root_dir, "student", "student-por.csv"),
-    #     delimiter=";")
-    #     por_df["course"] = "por"
-    #     data = pd.concat((mat_df, por_df))
     data = pd.read_csv(os.path.join(root_dir, "student", "student-por.csv"),
                        delimiter=";")
     print(data.shape)
