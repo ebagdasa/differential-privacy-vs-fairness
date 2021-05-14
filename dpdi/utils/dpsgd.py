@@ -124,6 +124,7 @@ def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
 def tail_average_iterates(w, T, s):
     return np.vstack(w[-(T - s):]).mean(axis=0)
 
+
 def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
            random_seed=RANDOM_SEED):
     """Implements Algorithm 1 (DP-SGD), with fixed seed for reproducibility."""
@@ -179,8 +180,10 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
     return iterates, losses, w_hat_bar
 
 
-def tail_averaged_sgd(X, y, T, s, lr, verbose=True, batch_size=64, random_seed=RANDOM_SEED):
-    """Implements tail-averaged SGD. This is DP-SGD but with no projection step and no noise."""
+def tail_averaged_sgd(X, y, T, s, lr, verbose=True, batch_size=64,
+                      random_seed=RANDOM_SEED):
+    """Implements tail-averaged SGD. This is DP-SGD but with no projection step and no
+    noise."""
     torch.manual_seed(random_seed)
     n, d = X.shape
 
