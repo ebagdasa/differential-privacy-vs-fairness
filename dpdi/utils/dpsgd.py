@@ -9,9 +9,10 @@ from numpy.random import default_rng
 
 RANDOM_SEED = 983445
 
+
 def compute_mse(X, y, w_hat):
     test_preds = X @ w_hat
-    test_err = np.mean((y - test_preds)**2)
+    test_err = np.mean((y - test_preds) ** 2)
     return test_err
 
 
@@ -82,19 +83,24 @@ def compute_sigma_dp(L_1, L_2, L_3, k, delta, eps: float, n: int):
 
 def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array,
                       dpsgd_w_hat: np.array):
-    """Compute the quantity defined as \rho in the paper, along with its constituents."""
+    """Compute the quantities defined as \rho and \hi in the paper, along with their
+    constituents."""
     loss_sgd_0 = np.mean(((X[g == 0, :] @ sgd_w_hat) - y[g == 0]) ** 2)
     loss_sgd_1 = np.mean(((X[g == 1, :] @ sgd_w_hat) - y[g == 1]) ** 2)
     loss_dpsgd_0 = np.mean(((X[g == 0, :] @ dpsgd_w_hat) - y[g == 0]) ** 2)
     loss_dpsgd_1 = np.mean(((X[g == 1, :] @ dpsgd_w_hat) - y[g == 1]) ** 2)
     rho = (loss_dpsgd_0 - loss_dpsgd_1) / (loss_sgd_0 - loss_sgd_1)
+    phi = (loss_dpsgd_0 - loss_sgd_0) / (loss_dpsgd_1 - loss_sgd_1)
     print(f"loss_dpsgd_0: {loss_dpsgd_0}")
     print(f"loss_dpsgd_1: {loss_dpsgd_1}")
     print(f"loss_sgd_0: {loss_sgd_0}")
     print(f"loss_sgd_1: {loss_sgd_1}")
     print("[INFO] rho : {} = {} / {}".format(rho, loss_dpsgd_0 - loss_dpsgd_1,
                                              loss_sgd_0 - loss_sgd_1))
+    print("[INFO] phi : {} = {} / {}".format(phi, loss_dpsgd_0 - loss_sgd_0,
+                                             loss_dpsgd_1 - loss_sgd_1))
     metrics = {"rho": rho,
+               "phi": phi,
                "loss_dpsgd_0": loss_dpsgd_0,
                "loss_dpsgd_1": loss_dpsgd_1,
                "loss_sgd_0": loss_sgd_0,
