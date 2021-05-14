@@ -157,8 +157,7 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
     # Compute the various constants needed for the algorithm.
     L_1, L_2, L_3, k = compute_L_and_k(X, y, w_star, n, T, delta)
     sigma_dp = compute_sigma_dp(L_1, L_2, L_3, k=k, delta=delta, eps=eps, n=n)
-    if verbose:
-        print_dpsgd_diagnostics(L_1, L_2, L_3, k=k, sigma_dp=sigma_dp, n=n, delta=delta)
+    print_dpsgd_diagnostics(L_1, L_2, L_3, k=k, sigma_dp=sigma_dp, n=n, delta=delta)
 
     # Initialization
     loader = build_loader(X, y, batch_size)
