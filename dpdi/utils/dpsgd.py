@@ -7,6 +7,8 @@ from math import sqrt
 from math import log as ln
 from numpy.random import default_rng
 
+RANDOM_SEED = 983445
+
 
 def build_loader(X, y, batch_size=64, shuffle=False):
     inputs = torch.from_numpy(X).double()
@@ -119,8 +121,11 @@ def print_dpsgd_diagnostics(L_1, L_2, L_3, k, sigma_dp, n, delta):
     print("sigma_dp: %f" % sigma_dp)
 
 
+def tail_average_iterates(w, T, s):
+    return np.vstack(w[-(T - s):]).mean(axis=0)
+
 def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
-           random_seed=983445):
+           random_seed=RANDOM_SEED):
     """Implements Algorithm 1 (DP-SGD), with fixed seed for reproducibility."""
     torch.manual_seed(random_seed)
     n, d = X.shape
@@ -142,12 +147,13 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
     losses = list()
     while t < T:
         for i, (X_i, y_i) in enumerate(loader):
-            grad_noise = torch.normal(mean=0, std=sigma_dp, size=w_star.shape)
+
             y_hat = torch.matmul(X_i, w_hat)
             loss = torch.mean((y_i - y_hat) ** 2)
             loss.backward()
 
             with torch.no_grad():
+                grad_noise = torch.normal(mean=0, std=sigma_dp, size=w_star.shape)
                 w_hat -= lr * (w_hat.grad + grad_noise)
 
                 # Project back onto ball of radius L_3
@@ -167,14 +173,61 @@ def dp_sgd(X, y, T, delta, eps, s, lr, w_star, verbose=True, batch_size=64,
 
             t += 1
             if t >= T:
-                print("[INFO] completed %s iterations of SGD." % t)
+                print("[INFO] completed %s iterations of DP-SGD." % t)
                 break
-    w_hat_bar = np.vstack(iterates[-(T - s):]).mean(axis=0)
+    w_hat_bar = tail_average_iterates(iterates, T, s)
     return iterates, losses, w_hat_bar
 
 
-def vanilla_sgd(loader, T, lr, d=2, verbose=True):
+def tail_averaged_sgd(X, y, T, s, lr, verbose=True, batch_size=64, random_seed=RANDOM_SEED):
+    """Implements tail-averaged SGD. This is DP-SGD but with no projection step and no noise."""
+    torch.manual_seed(random_seed)
+    n, d = X.shape
+
+    # Initialization
+    loader = build_loader(X, y, batch_size)
+    t = 0
+    w_hat = torch.zeros(size=(d,), dtype=torch.double)
+    w_hat.requires_grad = True
+    lr = torch.Tensor([lr]).double()
+
+    iterates = list()
+    losses = list()
+    while t < T:
+        for i, (X_i, y_i) in enumerate(loader):
+
+            y_hat = torch.matmul(X_i, w_hat)
+            loss = torch.mean((y_i - y_hat) ** 2)
+            loss.backward()
+
+            with torch.no_grad():
+                w_hat -= lr * w_hat.grad
+
+                w_hat.grad.zero_()
+                iterate_numpy = w_hat.clone().detach().numpy()
+                loss_numpy = loss.clone().detach().numpy()
+                iterates.append(iterate_numpy)
+                losses.append(loss_numpy)
+
+            if verbose and (t % 1000 == 0):
+                print(
+                    "iteration {} loss: {} new w_hat: {}".format(t, loss, iterate_numpy))
+
+            t += 1
+            if t >= T:
+                print("[INFO] completed %s iterations of SGD." % t)
+                break
+    w_hat_bar = tail_average_iterates(iterates, T, s)
+    return iterates, losses, w_hat_bar
+
+
+def vanilla_sgd(X, y, T, lr, verbose=True, batch_size=64, random_seed=RANDOM_SEED):
     """Implements vanilla SGD for the dataset."""
+    print("[WARNING] this function is deprecated and provided only for reproducibility.")
+    print("Use tail_averaged_sgd() instead (note different return types and signatures).")
+    torch.manual_seed(random_seed)
+    n, d = X.shape
+    loader = build_loader(X, y, batch_size)
     w_hat = torch.zeros(size=(d,), dtype=torch.double)
     w_hat.requires_grad = True
     lr = torch.Tensor([lr]).double()
@@ -182,9 +235,7 @@ def vanilla_sgd(loader, T, lr, d=2, verbose=True):
     iterates = list()
     losses = list()
     while t < T:
-        for i, (X_i, y_i) in enumerate(
-                loader):  # Should be iterating over batches, instead of one pass over
-            # dataset
+        for i, (X_i, y_i) in enumerate(loader):
             y_hat = torch.matmul(X_i, w_hat)
             loss = torch.mean((y_i - y_hat) ** 2)
             # Computes the gradients for all tensors with grad=True
