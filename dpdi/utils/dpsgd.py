@@ -9,6 +9,11 @@ from numpy.random import default_rng
 
 RANDOM_SEED = 983445
 
+def compute_mse(X, y, w_hat):
+    test_preds = X @ w_hat
+    test_err = np.mean((y - test_preds)**2)
+    return test_err
+
 
 def build_loader(X, y, batch_size=64, shuffle=False):
     inputs = torch.from_numpy(X).double()
