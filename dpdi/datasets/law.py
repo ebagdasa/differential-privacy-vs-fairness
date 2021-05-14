@@ -4,6 +4,12 @@ import numpy as np
 
 
 def load_law_dataset(sensitive, root_dir="../data/ucla-law-school"):
+    """Reads the law school dataset, as in (Khani et al. 2020).
+
+    Adapted from
+    https://worksheets.codalab.org/rest/bundles/0xff62528c13b84510b7f10562f21be280
+    /contents/blob/data_preprocess/student.py
+    """
     data = pd.read_csv(os.path.join(root_dir, 'lsac.csv'), na_values=" ")
     data.dropna(axis=0, inplace=True)
     data = data[[
