@@ -19,7 +19,6 @@ def load_candc_dataset(root_dir="../data/communities-and-crime"):
 
     data = data.replace('?', np.nan)
     data = data.dropna(axis=1)
-    print(data.columns)
 
     # remove race related stuff
     data.loc[data.racePctWhite >= 0.85, 'racePctWhite'] = 1
