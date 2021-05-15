@@ -4,7 +4,9 @@ import numpy as np
 
 
 def load_candc_dataset(root_dir="../data/communities-and-crime"):
-    """Loads the communities and crime dataset.
+    """Loads the communities and crime dataset, and perform some preprocessing.
+
+    This mimics the preprocessing of [Khani et al.].
 
     The data files can be accessed at
     https://worksheets.codalab.org/bundles/0xa8201e470d404a7aa03746291161d9e1
