@@ -95,7 +95,7 @@ def compute_sigma_dp(L_1, L_2, L_3, k, delta, eps: float, n: int):
 
 def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array,
                       dpsgd_w_hat: np.array, verbose=True):
-    """Compute the quantities defined as \rho and \hi in the paper, along with their
+    """Compute the quantities defined as rho and phi in the paper, along with their
     constituents."""
     loss_sgd_0 = np.mean(((X[g == 0, :] @ sgd_w_hat) - y[g == 0]) ** 2)
     loss_sgd_1 = np.mean(((X[g == 1, :] @ sgd_w_hat) - y[g == 1]) ** 2)
