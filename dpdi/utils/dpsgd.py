@@ -17,8 +17,8 @@ def get_wstar(df):
     If an intercept term is desired, add an 'intercept' column to the
         design matrix of all ones.
     """
-    lr = LinearRegression(fit_intercept=False)\
-    .fit(X=df.drop(['sensitive', 'target'],axis=1), y=df['target'])
+    lr = LinearRegression(fit_intercept=False) \
+        .fit(X=df.drop(['sensitive', 'target'], axis=1), y=df['target'])
     return lr.coef_
 
 
@@ -94,7 +94,7 @@ def compute_sigma_dp(L_1, L_2, L_3, k, delta, eps: float, n: int):
 
 
 def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array,
-                      dpsgd_w_hat: np.array):
+                      dpsgd_w_hat: np.array, verbose=True):
     """Compute the quantities defined as \rho and \hi in the paper, along with their
     constituents."""
     loss_sgd_0 = np.mean(((X[g == 0, :] @ sgd_w_hat) - y[g == 0]) ** 2)
@@ -103,14 +103,15 @@ def compute_disparity(X: np.array, g: np.array, y: np.array, sgd_w_hat: np.array
     loss_dpsgd_1 = np.mean(((X[g == 1, :] @ dpsgd_w_hat) - y[g == 1]) ** 2)
     rho = (loss_dpsgd_0 - loss_dpsgd_1) / (loss_sgd_0 - loss_sgd_1)
     phi = (loss_dpsgd_0 - loss_sgd_0) / (loss_dpsgd_1 - loss_sgd_1)
-    print(f"loss_dpsgd_0: {loss_dpsgd_0}")
-    print(f"loss_dpsgd_1: {loss_dpsgd_1}")
-    print(f"loss_sgd_0: {loss_sgd_0}")
-    print(f"loss_sgd_1: {loss_sgd_1}")
-    print("[INFO] rho : {} = {} / {}".format(rho, loss_dpsgd_0 - loss_dpsgd_1,
-                                             loss_sgd_0 - loss_sgd_1))
-    print("[INFO] phi : {} = {} / {}".format(phi, loss_dpsgd_0 - loss_sgd_0,
-                                             loss_dpsgd_1 - loss_sgd_1))
+    if verbose:
+        print(f"loss_dpsgd_0: {loss_dpsgd_0}")
+        print(f"loss_dpsgd_1: {loss_dpsgd_1}")
+        print(f"loss_sgd_0: {loss_sgd_0}")
+        print(f"loss_sgd_1: {loss_sgd_1}")
+        print("[INFO] rho : {} = {} / {}".format(rho, loss_dpsgd_0 - loss_dpsgd_1,
+                                                 loss_sgd_0 - loss_sgd_1))
+        print("[INFO] phi : {} = {} / {}".format(phi, loss_dpsgd_0 - loss_sgd_0,
+                                                 loss_dpsgd_1 - loss_sgd_1))
     metrics = {"rho": rho,
                "phi": phi,
                "loss_dpsgd_0": loss_dpsgd_0,
