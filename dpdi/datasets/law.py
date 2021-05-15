@@ -22,8 +22,9 @@ def load_law_dataset(sensitive, root_dir="../data/ucla-law-school", normalize=Tr
         data['sex'] -= 1
         data.rename(columns={'sex': 'sensitive'}, inplace=True)
     elif sensitive == 'race':
-        data.loc[data.race < 7, 'race'] = 0  # non-white
-        data.loc[data.race >= 7, 'race'] = 1  # white
+        print("[INFO] with sens. attr. == race, '1' is non-white, '0' is white.")
+        data.loc[data.race < 7, 'race'] = 1  # non-white
+        data.loc[data.race >= 7, 'race'] = 0  # white
         data.rename(columns={'race': 'sensitive'}, inplace=True)
 
     data.rename(columns={'zgpa': 'target'}, inplace=True)
