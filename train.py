@@ -1,7 +1,7 @@
 import logging
 
 from dpdi.helper import get_helper
-from dpdi.models.word_model import RNNModel
+from dpdi.models import get_net
 
 logger = logging.getLogger('logger')
 
@@ -10,18 +10,13 @@ import argparse
 from scipy import ndimage
 from collections import defaultdict
 from tensorboardX import SummaryWriter
-import torchvision.models as models
-from dpdi.models.mobilenet import MobileNetV2
-from dpdi.models.densenet import DenseNet
-from dpdi.models.simple import Net, FlexiNet, reseed, RegressionNet
-from dpdi.models.resnet import get_resnet_extractor, get_pretrained_resnet
+from dpdi.models.simple import reseed
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import yaml
 from dpdi.utils.text_load import *
 from dpdi.utils.utils import create_table, plot_confusion_matrix
-from dpdi.models.inception import *
 import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -56,46 +51,6 @@ def get_optimizer(helper):
     else:
         raise Exception('Specify `optimizer` in params.yaml.')
     return optimizer
-
-
-def get_net(helper, num_classes):
-    if helper.params['model'] == 'densenet':
-        net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
-    elif helper.params['model'] == 'resnet':
-        logger.info(f'Model size: {num_classes}')
-        net = models.resnet18(num_classes=num_classes)
-    elif helper.params['model'] == 'PretrainedRes':
-        net = get_pretrained_resnet(num_classes,
-                                    helper.params['freeze_pretrained_weights'])
-        net = net.cuda()
-    elif helper.params['model'] == 'PretrainedResExtractor':
-        net = get_resnet_extractor(num_classes,
-                                   helper.params['freeze_pretrained_weights'])
-    elif helper.params['model'] == 'FlexiNet':
-        net = FlexiNet(3, num_classes)
-    elif helper.params['model'] == 'inception':
-        net = inception_v3(pretrained=True)
-        net.fc = nn.Linear(2048, num_classes)
-        net.aux_logits = False
-        # model = torch.nn.DataParallel(model).cuda()
-    elif helper.params['model'] == 'mobilenet':
-        net = MobileNetV2(n_class=num_classes, input_size=64)
-    elif helper.params['model'] == 'word':
-        net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
-                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
-                       nlayers=helper.params['nlayers'],
-                       dropout=helper.params['dropout'],
-                       tie_weights=helper.params['tied'])
-    elif helper.params['model'] == 'regressionnet':
-        net = RegressionNet(output_dim=1)
-    else:
-        net = Net(output_dim=num_classes)
-    logger.info(
-        'Total number of params for model {}: {}'.format(
-            helper.params["model"],
-            sum(p.numel() for p in net.parameters() if p.requires_grad)
-        ))
-    return net
 
 
 def get_criterion(helper):
