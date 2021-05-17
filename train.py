@@ -317,7 +317,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                     for k in keys:
                         loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
-                assert labels_mapping, "provide labels_mapping to use mse."
                 running_metric_total += compute_mse(outputs, preprocessed_labels)
                 main_test_metric = running_metric_total / n_test
 
