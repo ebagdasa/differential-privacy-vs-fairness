@@ -558,6 +558,8 @@ class ImageHelper(Helper):
             num_classes = len(self.labels)
         elif self.params['dataset'] == 'lfw':
             num_classes = len(self.labels)
+        elif self.params['dataset'] == 'zillow':
+            num_classes = None
         else:
             num_classes = 10
         return num_classes
