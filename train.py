@@ -319,7 +319,6 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             else:
                 running_metric_total += compute_mse(torch.squeeze(outputs),
                                                     torch.squeeze(preprocessed_labels))
-                import ipdb;ipdb.set_trace()
                 main_test_metric = running_metric_total / n_test
 
     if vis:
