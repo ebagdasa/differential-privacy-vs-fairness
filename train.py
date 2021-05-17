@@ -149,7 +149,7 @@ def compute_channelwise_mean(dataset):
     return
 
 
-def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=None):
+def add_pos_and_neg_summary_images(data_loader, is_regression, max_images=64, labels_mapping=None):
     images, idxs, labels = next(iter(data_loader))
     if labels_mapping:
         pos_labels = [k for k, v in labels_mapping.items() if v == 1]
@@ -157,14 +157,15 @@ def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=No
     attr_labels = data_loader.dataset.get_attribute_annotations(idxs)
     pos_attr_idxs = idx_where_true(attr_labels == 1)
     neg_attr_idxs = idx_where_true(attr_labels == 0)
-    pos_label_images = images[labels == 1]
-    neg_label_images = images[labels == 0]
     pos_attr_images = images[pos_attr_idxs]
     neg_attr_images = images[neg_attr_idxs]
-    writer.add_images('pos_label_images', pos_label_images[:max_images, ...])
-    writer.add_images('neg_label_images', neg_label_images[:max_images, ...])
     writer.add_images('pos_attr_images', pos_attr_images[:max_images, ...])
     writer.add_images('neg_attr_images', neg_attr_images[:max_images, ...])
+    if not is_regression:
+        pos_label_images = images[labels == 1]
+        neg_label_images = images[labels == 0]
+        writer.add_images('pos_label_images', pos_label_images[:max_images, ...])
+        writer.add_images('neg_label_images', neg_label_images[:max_images, ...])
     return
 
 
@@ -617,10 +618,12 @@ if __name__ == '__main__':
         helper.start_epoch = 1
 
     criterion = get_criterion(helper)
+    is_regression = helper.params.get('criterion') == 'mse'
 
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader,
+                                       is_regression,
                                        labels_mapping=true_labels_to_binary_labels)
 
         # Skip channelwise mean for MNIST; it only has one channel and means are known.
@@ -637,7 +640,7 @@ if __name__ == '__main__':
     writer.add_text('Model Params', table)
     logger.info(table)
     logger.info(helper.labels)
-    metric_name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
+    metric_name = 'mse' if is_regression else 'accuracy'
 
     epoch = 0
     test_loss = test(net, epoch, name, helper.test_loader,
