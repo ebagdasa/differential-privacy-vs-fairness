@@ -251,9 +251,12 @@ def idx_where_true(ary):
         bool_indices = ary.values
     elif isinstance(ary, torch.Tensor):
         bool_indices = ary.detach().cpu().numpy()
+    elif isinstance(ary, np.ndarray):
+        bool_indices = ary
     else:
         raise ValueError("Got unexpected ary of type {}".format(type(ary)))
     return np.ravel(np.argwhere(bool_indices))
+
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
