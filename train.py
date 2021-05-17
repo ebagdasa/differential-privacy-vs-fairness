@@ -317,7 +317,8 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                     for k in keys:
                         loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
-                running_metric_total += compute_mse(outputs, preprocessed_labels)
+                running_metric_total += compute_mse(torch.squeeze(outputs),
+                                                    torch.squeeze(preprocessed_labels))
                 import ipdb;ipdb.set_trace()
                 main_test_metric = running_metric_total / n_test
 
