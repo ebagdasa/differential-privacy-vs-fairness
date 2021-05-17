@@ -639,7 +639,6 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
-    logger.info(helper.labels)
     metric_name = 'mse' if is_regression else 'accuracy'
 
     epoch = 0
