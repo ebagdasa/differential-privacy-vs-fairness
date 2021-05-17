@@ -293,7 +293,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                 preprocessed_labels = binarize_labels_tensor(
                     labels, pos_labels, labels_type)
             else:
-                preprocessed_labels = labels
+                preprocessed_labels = labels.float()
 
             n_test += preprocessed_labels.size(0)
 
