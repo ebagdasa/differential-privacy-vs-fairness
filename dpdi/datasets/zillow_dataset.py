@@ -70,7 +70,7 @@ class ZillowDataset(Dataset):
             idx = idx.tolist()
         fp = self.anno["img_fp"].values[idx]
         image = self.loader(fp)
-        label = self.targets[idx].reshape(-1,1)
+        label = self.targets[idx]
         if self.transform:
             image = self.transform(image)
         sample = (image, idx, label)
