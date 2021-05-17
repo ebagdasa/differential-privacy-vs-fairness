@@ -13,7 +13,7 @@ def get_anno_df(root_dir, train):
     df = pd.read_csv(os.path.join(root_dir, "property-data.csv"))
     census_df = pd.read_csv(os.path.join(root_dir, "census-data.csv"))
     census_df.rename({"zip_code": "ZIP"}, axis=1, inplace=True)
-    df["image_fp"] = df["zpid"].apply(
+    df["img_fp"] = df["zpid"].apply(
         lambda x: os.path.join(root_dir, "processed_images", str(x), ".png"))
     df = df.join(census_df, on="ZIP", how="left", rsuffix="census")
     df_train, df_test = train_test_split(df, train_size=0.8,
