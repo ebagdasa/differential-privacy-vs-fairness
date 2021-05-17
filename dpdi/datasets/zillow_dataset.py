@@ -70,7 +70,8 @@ class ZillowDataset(Dataset):
             idx = idx.tolist()
         fp = self.anno["img_fp"].values[idx]
         image = self.loader(fp)
-        label = torch.from_numpy(self.targets[idx]).float()
+        label = torch.from_numpy(
+            np.ndarray(self.targets[idx])).float()
         if self.transform:
             image = self.transform(image)
         sample = (image, idx, label)
