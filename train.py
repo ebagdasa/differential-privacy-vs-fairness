@@ -640,9 +640,8 @@ if __name__ == '__main__':
                      mse=metric_name == 'mse',
                      labels_mapping=true_labels_to_binary_labels)
 
-    for epoch in range(helper.start_epoch,
-                       epochs):  # loop over the dataset multiple times
-        try:
+    try:
+        for epoch in range(helper.start_epoch, epochs):
             if dp:
                 train_dp(helper.train_loader, net, optimizer, epoch,
                          labels_mapping=true_labels_to_binary_labels,
@@ -655,8 +654,9 @@ if __name__ == '__main__':
             test_loss = test(net, epoch, name, helper.test_loader,
                              mse=metric_name == 'mse',
                              labels_mapping=true_labels_to_binary_labels)
-        except KeyboardInterrupt:
-            print("[KeyboardInterrupt; logged to: {}".format(uid_logdir))
-        helper.save_model(net, epoch, test_loss)
+            helper.save_model(net, epoch, test_loss)
+    except KeyboardInterrupt:
+        print("[KeyboardInterrupt; logged to: {}".format(uid_logdir))
+    helper.save_model(net, epoch, test_loss)
     logger.info(
         f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
