@@ -1,5 +1,6 @@
 import logging
 
+from dpdi.helper import get_helper
 from dpdi.models.word_model import RNNModel
 
 logger = logging.getLogger('logger')
@@ -11,7 +12,6 @@ from collections import defaultdict
 from tensorboardX import SummaryWriter
 import torchvision.models as models
 from dpdi.models.mobilenet import MobileNetV2
-from dpdi.helper.image_helper import ImageHelper
 from dpdi.models.densenet import DenseNet
 from dpdi.models.simple import Net, FlexiNet, reseed, RegressionNet
 from dpdi.models.resnet import get_resnet_extractor, get_pretrained_resnet
@@ -29,16 +29,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
 
-TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
+TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
-
-
-def get_helper(params, d, name):
-    helper = ImageHelper(current_time=d, params=params, name=name)
-    return helper
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
 
 
 def maybe_override_parameter(params: dict, args, parameter_name: str):
@@ -130,6 +125,8 @@ def load_data(helper, params, alpha, mu):
         helper.load_celeba_data()
     elif helper.params['dataset'] == 'lfw':
         helper.load_lfw_data()
+    elif helper.params['dataset'] == 'zillow':
+        helper.load_zillow_data()
     else:
         # First, define classes_to_keep.
         # Labels are assigned in order of index in this array; so minority_key has
