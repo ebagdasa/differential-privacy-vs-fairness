@@ -414,11 +414,11 @@ class ImageHelper(Helper):
         self.unnormalized_test_loader = torch.utils.data.DataLoader(
             self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
             shuffle=True,
-            num_workers=8, drop_last=True, pin_memory=True)
+            num_workers=8, drop_last=True)
 
         self.test_loader = torch.utils.data.DataLoader(
             self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=2, pin_memory=True)
+            num_workers=8)
 
     def load_zillow_data(self):
         self.train_dataset = ZillowDataset(
