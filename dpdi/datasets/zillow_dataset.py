@@ -27,8 +27,8 @@ def get_anno_df(root_dir, train):
 
 def get_zillow_transforms(is_train, normalize: bool = True):
     im_size = (224, 224)
-    mu_data = [0, 0, 0]
-    std_data = [1., 1., 1.]
+    mu_data = [0.478984, 0.477207, 0.451995]
+    std_data = [0.248131, 0.248280, 0.273420]
     center_crop = transforms.CenterCrop([200, 200])
     resize = transforms.Resize(im_size)
     rotate = transforms.RandomRotation(degrees=5)
