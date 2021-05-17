@@ -552,7 +552,8 @@ if __name__ == '__main__':
 
     name = make_uid(params, args)
 
-    writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
+    uid_logdir = os.path.join(args.logdir, name)
+    writer = SummaryWriter(log_dir=uid_logdir)
 
     helper = get_helper(params, d, name)
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
@@ -641,18 +642,21 @@ if __name__ == '__main__':
 
     for epoch in range(helper.start_epoch,
                        epochs):  # loop over the dataset multiple times
-        if dp:
-            train_dp(helper.train_loader, net, optimizer, epoch,
-                     labels_mapping=true_labels_to_binary_labels,
-                     sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
-        else:
-            train(helper.train_loader, net, optimizer, epoch,
-                  labels_mapping=true_labels_to_binary_labels)
-        if helper.params['scheduler']:
-            scheduler.step()
-        test_loss = test(net, epoch, name, helper.test_loader,
-                         mse=metric_name == 'mse',
-                         labels_mapping=true_labels_to_binary_labels)
+        try:
+            if dp:
+                train_dp(helper.train_loader, net, optimizer, epoch,
+                         labels_mapping=true_labels_to_binary_labels,
+                         sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
+            else:
+                train(helper.train_loader, net, optimizer, epoch,
+                      labels_mapping=true_labels_to_binary_labels)
+            if helper.params['scheduler']:
+                scheduler.step()
+            test_loss = test(net, epoch, name, helper.test_loader,
+                             mse=metric_name == 'mse',
+                             labels_mapping=true_labels_to_binary_labels)
+        except KeyboardInterrupt:
+            print("[KeyboardInterrupt; logged to: {}".format(uid_logdir))
         helper.save_model(net, epoch, test_loss)
     logger.info(
         f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
