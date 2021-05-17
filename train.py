@@ -276,6 +276,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     keys = list() if not hasattr(helper.test_dataset, 'keys') else helper.test_dataset.keys
     print("[DEBUG] detected the following keys for test metrics: {}".format(keys))
     metric_name = 'accuracy' if not mse else 'mse'
+    cls_labels = getattr(helper, "labels", [])
     with torch.no_grad():
         for data in tqdm(testloader):
             if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
@@ -289,22 +290,23 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             if labels_mapping:
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
-                binary_labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+                preprocessed_labels = binarize_labels_tensor(
+                    labels, pos_labels, labels_type)
             else:
-                binary_labels = labels
+                preprocessed_labels = labels
 
-            n_test += binary_labels.size(0)
+            n_test += preprocessed_labels.size(0)
 
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
-                correct_labels.extend([x.item() for x in binary_labels])
-                running_metric_total += (predicted == binary_labels).sum().item()
+                correct_labels.extend([x.item() for x in preprocessed_labels])
+                running_metric_total += (predicted == preprocessed_labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
-                batch_ce_loss = ce_loss(outputs, binary_labels)
+                batch_ce_loss = ce_loss(outputs, preprocessed_labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                for l in helper.labels:
-                    loss_by_label[l].extend(batch_ce_loss[binary_labels == l])
+                for l in cls_labels:
+                    loss_by_label[l].extend(batch_ce_loss[preprocessed_labels == l])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
@@ -316,59 +318,59 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                         loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
                 assert labels_mapping, "provide labels_mapping to use mse."
-                running_metric_total += compute_mse(outputs, binary_labels)
+                running_metric_total += compute_mse(outputs, preprocessed_labels)
                 main_test_metric = running_metric_total / n_test
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
         metric_list = list()
         metric_dict = dict()
-        if not mse:
+        if not mse:  # Plot the classification metrics
             fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
-                                            labels=helper.labels, normalize=True)
+                                            labels=cls_labels, normalize=True)
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
-            for l in helper.labels:
+            for l in cls_labels:
                 plot(epoch, mean_of_tensor_list(loss_by_label[l]), 'test_loss_per_class/{}'.format(l))
             for a in attributes:
                 plot(epoch, mean_of_tensor_list(loss_by_attribute[a]), 'test_loss_per_attr/{}'.format(a))
             for k in keys:
                 plot(epoch, mean_of_tensor_list(loss_by_key[k]), 'test_loss_per_key/{}'.format(k))
-        for i, class_name in enumerate(helper.labels):
+        for i, class_name in enumerate(cls_labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
                 fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
-                                                labels=helper.labels, normalize=False)
+                                                labels=cls_labels, normalize=False)
                 cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
                 torch.save(cm, cm_name)
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(
-                    outputs, binary_labels, class_name,
+                    outputs, preprocessed_labels, class_name,
                     grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
             metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
-
-        fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class',
-                                    accuracy=main_test_metric)
-        writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
-        torch.save(metric_dict,
-                   f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
-
-        plot(epoch, np.var(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_var')
-        plot(epoch, np.max(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_max')
-        plot(epoch, np.min(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_min')
-        plot(epoch, np.max(metric_list) - np.min(metric_list),
-             name=f'{metric_name}_intra_class_max_diff/'
-                  f'{metric_name}_intra_class_max_diff')
+        if len(metric_dict):
+            fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class',
+                                        accuracy=main_test_metric)
+            writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
+            torch.save(metric_dict,
+                       f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
+        if len(metric_list):
+            plot(epoch, np.var(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_var')
+            plot(epoch, np.max(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_max')
+            plot(epoch, np.min(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_min')
+            plot(epoch, np.max(metric_list) - np.min(metric_list),
+                 name=f'{metric_name}_intra_class_max_diff/'
+                      f'{metric_name}_intra_class_max_diff')
 
     return main_test_metric
 
