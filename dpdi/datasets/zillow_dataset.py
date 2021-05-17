@@ -68,7 +68,7 @@ class ZillowDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        fp = self.anno["img_fp"][idx]
+        fp = self.anno["img_fp"].values[idx]
         image = self.loader(fp)
         label = torch.from_numpy(self.targets[idx])
         if self.transform:
