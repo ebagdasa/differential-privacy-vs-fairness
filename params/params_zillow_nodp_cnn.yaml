@@ -14,7 +14,7 @@ criterion: mse
 
 save_model: True
 dataset: zillow
-model: RegressionNet
+model: regressionnet
 scheduler: False
 optimizer: Adam
 
