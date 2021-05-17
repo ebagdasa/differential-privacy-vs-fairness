@@ -57,7 +57,7 @@ class ZillowDataset(Dataset):
 
     @property
     def targets(self):
-        return self.anno["price"].values
+        return np.expand_dims(self.anno["price"].values, 1).astype(float)
 
     @property
     def attributes(self):
@@ -71,9 +71,7 @@ class ZillowDataset(Dataset):
             idx = idx.tolist()
         fp = self.anno["img_fp"].values[idx]
         image = self.loader(fp)
-        import ipdb;ipdb.set_trace()
-        label = torch.from_numpy(
-            np.ndarray(self.targets[idx])).float()
+        label = torch.from_numpy(self.targets[idx]).float()
         if self.transform:
             image = self.transform(image)
         sample = (image, idx, label)
