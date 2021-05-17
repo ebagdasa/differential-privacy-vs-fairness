@@ -582,7 +582,7 @@ if __name__ == '__main__':
     alpha = args.alpha
     adaptive_sigma = helper.params.get('adaptive_sigma', False)
     dp = helper.params['dp']
-    mu = helper.params['mu']
+    mu = helper.params.get('mu')
 
     reseed(5)
 
