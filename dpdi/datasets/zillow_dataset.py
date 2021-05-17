@@ -71,6 +71,7 @@ class ZillowDataset(Dataset):
             idx = idx.tolist()
         fp = self.anno["img_fp"].values[idx]
         image = self.loader(fp)
+        import ipdb;ipdb.set_trace()
         label = torch.from_numpy(
             np.ndarray(self.targets[idx])).float()
         if self.transform:
