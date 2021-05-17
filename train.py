@@ -68,6 +68,7 @@ def get_criterion(helper):
             criterion = nn.CrossEntropyLoss()
     return criterion
 
+
 def load_data(helper, params, alpha, mu):
     classes_to_keep = None
     true_labels_to_binary_labels = None
