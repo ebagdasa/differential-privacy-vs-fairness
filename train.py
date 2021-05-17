@@ -393,7 +393,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
              adaptive_sigma=False):
     norm_type = 2
     model.train()
-    running_loss = 0.0
     label_norms = defaultdict(list)
     ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
@@ -420,7 +419,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             loss = criterion(outputs, labels)
 
         batch_loss = torch.mean(loss).item()
-        running_loss += batch_loss
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
 
@@ -472,8 +470,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         if i > 0 and i % 10 == 0:
             logger.info('[epoch %d, batch %5d] loss: %.3f' %
                         (epoch + 1, i + 1, batch_loss))
-            plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
-            running_loss = 0.0
+            plot(epoch * len(trainloader) + i, batch_loss, 'Train Loss')
     print(ssum)
     plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
@@ -483,7 +480,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
 def train(trainloader, model, optimizer, epoch, labels_mapping=None):
     model.train()
-    running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
         if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
@@ -519,13 +515,8 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         loss.backward()
         optimizer.step()
-        # logger.info statistics
-        running_loss += loss.item()
         if i > 0 and i % 20 == 0:
-            #             logger.info('[%d, %5d] loss: %.3f' %
-            #                   (epoch + 1, i + 1, running_loss / 2000))
-            plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
-            running_loss = 0.0
+            plot(epoch * len(trainloader) + i, loss.item(), 'Train Loss')
 
 
 if __name__ == '__main__':
