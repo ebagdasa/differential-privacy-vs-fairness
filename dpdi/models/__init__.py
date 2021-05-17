@@ -41,7 +41,7 @@ def get_net(helper, num_classes):
                        dropout=helper.params['dropout'],
                        tie_weights=helper.params['tied'])
     elif model_type == 'regressionnet':
-        net = RegressionNet(output_dim=1)
+        net = RegressionNet()
     else:
         net = Net(output_dim=num_classes)
     return net
