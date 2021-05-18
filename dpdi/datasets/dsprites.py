@@ -77,7 +77,7 @@ class DspritesDataset(torch.utils.data.Dataset):
         img = self.data[idx, ...].astype(np.float32)
         if self.transform:
             img = self.transform(img)
-        label = self.targets[idx]
+        label = self.targets[idx].astype(np.float32)
         sample = (img, idx, label)
         return sample
 
