@@ -3,6 +3,8 @@ import logging
 from dpdi.helper import get_helper
 from dpdi.models import get_net
 
+SINGLE_CHANNEL_DATASETS = ('mnist', 'dsprites')
+
 logger = logging.getLogger('logger')
 
 from datetime import datetime
@@ -129,25 +131,26 @@ def mean_of_tensor_list(lst):
 
 
 def compute_channelwise_mean(dataset):
-    means = defaultdict(list)
-    sds = defaultdict(list)
-    for (i, batch) in enumerate(dataset):
-        x, _, _ = batch
-        # batch is a set of images of shape [b, c, h, w]
-        means[0].append(torch.mean(x[:, 0, ...]))
-        sds[0].append(torch.std(x[:, 0, ...]))
-        means[1].append(torch.mean(x[:, 1, ...]))
-        sds[1].append(torch.std(x[:, 1, ...]))
-        means[2].append(torch.mean(x[:, 2, ...]))
-        sds[2].append(torch.std(x[:, 2, ...]))
-    # We ignore the last batch in case it is incomplete.
-    print("Channel 0 mean: %f" % mean_of_tensor_list(means[0][:-1]))
-    print("Channel 1 mean: %f" % mean_of_tensor_list(means[1][:-1]))
-    print("Channel 2 mean: %f" % mean_of_tensor_list(means[2][:-1]))
-    print("Channel 0 sd: %f" % mean_of_tensor_list(sds[0][:-1]))
-    print("Channel 1 sd: %f" % mean_of_tensor_list(sds[1][:-1]))
-    print("Channel 2 sd: %f" % mean_of_tensor_list(sds[2][:-1]))
-    return
+    if len(dataset.data.shape) > 3:
+        means = defaultdict(list)
+        sds = defaultdict(list)
+        for (i, batch) in enumerate(dataset):
+            x, _, _ = batch
+            # batch is a set of images of shape [b, c, h, w]
+            means[0].append(torch.mean(x[:, 0, ...]))
+            sds[0].append(torch.std(x[:, 0, ...]))
+            means[1].append(torch.mean(x[:, 1, ...]))
+            sds[1].append(torch.std(x[:, 1, ...]))
+            means[2].append(torch.mean(x[:, 2, ...]))
+            sds[2].append(torch.std(x[:, 2, ...]))
+        # We ignore the last batch in case it is incomplete.
+        print("Channel 0 mean: %f" % mean_of_tensor_list(means[0][:-1]))
+        print("Channel 1 mean: %f" % mean_of_tensor_list(means[1][:-1]))
+        print("Channel 2 mean: %f" % mean_of_tensor_list(means[2][:-1]))
+        print("Channel 0 sd: %f" % mean_of_tensor_list(sds[0][:-1]))
+        print("Channel 1 sd: %f" % mean_of_tensor_list(sds[1][:-1]))
+        print("Channel 2 sd: %f" % mean_of_tensor_list(sds[2][:-1]))
+        return
 
 
 def add_pos_and_neg_summary_images(data_loader, is_regression, max_images=64, labels_mapping=None):
@@ -623,7 +626,7 @@ if __name__ == '__main__':
                                        labels_mapping=true_labels_to_binary_labels)
 
         # Skip channelwise mean for MNIST; it only has one channel and means are known.
-        if helper.params['dataset'] != 'mnist':
+        if helper.params['dataset'] not in SINGLE_CHANNEL_DATASETS:
             compute_channelwise_mean(helper.train_loader)
 
     optimizer = get_optimizer(helper)
