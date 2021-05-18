@@ -30,6 +30,6 @@ def load_law_dataset(sensitive, root_dir="../data/ucla-law-school", normalize=Tr
     data.rename(columns={'zgpa': 'target'}, inplace=True)
     if normalize:
         for x in data.columns:
-            if x != 'sensitive':
+            if (x != 'sensitive' and x != 'target'):
                 data[x] = (data[x] - np.mean(data[x])) / np.std(data[x])
     return data
