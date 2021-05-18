@@ -10,6 +10,9 @@ def load_life_expectancy_dataset(root_dir="../data/life-expectancy", year=2015,
     data = data[data.year == year]  # Keep only this year
     del data['country']
     del data['year']
+    del data['alcohol']  # missing for 158 countries per year
+    del data['total expenditure']  # missing for 162 countries per year
+    data = data.dropna()
     # Create an integer indicator for minority group' note that the groupings are
     # "Developing" and "Developed"
     data['status'] = (data['status'] == minority_label).astype(int)
