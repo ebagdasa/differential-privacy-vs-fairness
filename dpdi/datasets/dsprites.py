@@ -54,7 +54,7 @@ class DspritesDataset(torch.utils.data.Dataset):
         #  see https://github.com/deepmind/dsprites-dataset for more info.
         self.latents_values = dsprites["latents_values"][idxs]
         self.latents_classes = dsprites["latents_classes"][idxs]
-        self.transforms = get_dsprites_transforms(self.is_train, normalize)
+        self.transform = get_dsprites_transforms(self.is_train, normalize)
 
     @property
     def targets(self):
@@ -76,6 +76,8 @@ class DspritesDataset(torch.utils.data.Dataset):
             idx = idx.tolist()
         # Cast shape of data from [64, 64] -> [1, 64, 64], and change to float.
         img = torch.unsqueeze(self.data[idx, ...], 0).to(dtype=torch.float32)
+        if self.transform:
+            img = self.transform(img)
         label = self.targets[idx]
         sample = (img, idx, label)
         return sample
