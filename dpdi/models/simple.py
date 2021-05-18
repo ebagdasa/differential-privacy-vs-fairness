@@ -101,25 +101,25 @@ class RegressionNet(SimpleNet):
     def __init__(self):
         super(RegressionNet, self).__init__()
         self.model = torch.nn.Sequential(
-            nn.Conv2d(3, 16, kernel_size=3, stride=1),
+            nn.Conv2d(1, 16, kernel_size=3, stride=1), # 64 --> 62
             nn.ReLU(),
-            nn.Conv2d(16, 16, kernel_size=3, stride=1),
+            nn.Conv2d(16, 32, kernel_size=3, stride=1), # 62 --> 60
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(16, 32, kernel_size=3, stride=1),
+            nn.MaxPool2d(2, 2),  # 60 --> 30
+            nn.Conv2d(32, 64, kernel_size=3, stride=1), # 30 --> 28
             nn.ReLU(),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1), # 28 --> 26
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2),
+            nn.MaxPool2d(2, 2),  # 26 --> 13
+            # nn.Conv2d(32, 64, kernel_size=3, stride=1),
+            # nn.ReLU(),
+            # nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            # nn.ReLU(),
+            # nn.MaxPool2d(2, 2),
             nn.Flatten(),
-            nn.Linear(36864, 64),
+            nn.Linear(13*13*64, 256),
             nn.ReLU(),
-            nn.Linear(64, 1)
+            nn.Linear(256, 1)
         )
 
     def forward(self, x):
