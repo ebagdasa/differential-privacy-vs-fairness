@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import numpy as np
-
+from dpdi.datasets.utils import normalize_columns
 
 def load_law_dataset(sensitive, root_dir="../data/ucla-law-school", normalize=True):
     """Reads the law school dataset, as in (Khani et al. 2020).
@@ -29,7 +29,5 @@ def load_law_dataset(sensitive, root_dir="../data/ucla-law-school", normalize=Tr
 
     data.rename(columns={'zgpa': 'target'}, inplace=True)
     if normalize:
-        for x in data.columns:
-            if x != 'sensitive':
-                data[x] = (data[x] - np.mean(data[x])) / np.std(data[x])
+        data = normalize_columns(data)
     return data
