@@ -554,7 +554,7 @@ class ImageHelper(Helper):
             num_classes = len(self.labels)
         elif self.params['dataset'] == 'lfw':
             num_classes = len(self.labels)
-        elif self.params['dataset'] == 'zillow':
+        elif self.params['dataset'] in ('zillow', 'dsprites'):
             num_classes = None
         else:
             num_classes = 10
