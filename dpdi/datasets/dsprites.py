@@ -74,7 +74,7 @@ class DspritesDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        img = self.data[idx, ...]
+        img = self.data[idx, ...].astype(np.float32)
         if self.transform:
             img = self.transform(img)
         label = self.targets[idx]
