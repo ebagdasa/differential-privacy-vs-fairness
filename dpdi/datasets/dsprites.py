@@ -74,8 +74,9 @@ class DspritesDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
+        img = torch.from_numpy(self.data[idx, ...])
         # Cast shape of data from [64, 64] -> [1, 64, 64], and change to float.
-        img = torch.unsqueeze(self.data[idx, ...], 0).to(dtype=torch.float32)
+        img = torch.unsqueeze(img, 0).to(dtype=torch.float32)
         if self.transform:
             img = self.transform(img)
         label = self.targets[idx]
