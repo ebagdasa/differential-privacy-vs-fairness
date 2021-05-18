@@ -20,6 +20,7 @@ from dpdi.datasets.lfw_dataset import LFWDataset, get_lfw_transforms
 from dpdi.datasets.mnist_dataset import MNISTWithAttributesDataset
 from dpdi.datasets.mc10_dataset import CIFAR10WithAttributesDataset
 from dpdi.datasets.zillow_dataset import ZillowDataset
+from dpdi.datasets.dsprites import DspritesDataset
 from collections import OrderedDict
 
 
@@ -179,6 +180,13 @@ class ImageHelper(Helper):
             self.test_dataset, batch_size=self.params['batch_size'],
             sampler=torch.utils.data.sampler.SubsetRandomSampler(ds_indices),
             drop_last=True)
+    
+    def load_dsprites_data(self):
+        self.train_dataset = DspritesDataset(self.params['root_dir'], True, True)
+        self.test_dataset = DspritesDataset(self.params['root_dir'], False, True)
+        self.unnormalized_test_dataset = DspritesDataset(self.params['root_dir'], 
+                                                         False, False)
+        self.create_loaders()
 
     def load_cifar_or_mnist_data(self, dataset, classes_to_keep=None,
                                  labels_mapping:dict=None,
@@ -277,14 +285,16 @@ class ImageHelper(Helper):
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
                                                         batch_size=self.params['batch_size'],
                                                         drop_last=True,
-                                                        pin_memory=True)
+                                                        pin_memory=True,
+                                                        num_workers=8)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
                                                        batch_size=self.params['test_batch_size'],
-                                                       pin_memory=True)
+                                                       pin_memory=True,
+                                                       num_workers=8)
         if hasattr(self, 'unnormalized_test_dataset'):
             self.unnormalized_test_loader = torch.utils.data.DataLoader(
                 self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
-            pin_memory=True)
+                num_workers=8, pin_memory=True)
 
     def load_faces_data(self):
 
@@ -406,19 +416,6 @@ class ImageHelper(Helper):
 
         return True
 
-    def make_loaders(self):
-        self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
-            num_workers=8, drop_last=True, pin_memory=True)
-
-        self.unnormalized_test_loader = torch.utils.data.DataLoader(
-            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
-            shuffle=True,
-            num_workers=8, drop_last=True)
-
-        self.test_loader = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=8)
 
     def load_zillow_data(self):
         self.train_dataset = ZillowDataset(
@@ -430,8 +427,7 @@ class ImageHelper(Helper):
             self.params['root_dir'], is_train=False, normalize=True
         )
 
-        self.make_loaders()
-
+        self.create_loaders()
 
 
     def load_celeba_data(self):
@@ -475,7 +471,7 @@ class ImageHelper(Helper):
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
 
-        self.make_loaders()
+        self.create_loaders()
 
     def load_lfw_data(self):
         transform_train = get_lfw_transforms('train')
@@ -515,7 +511,7 @@ class ImageHelper(Helper):
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
 
-        self.make_loaders()
+        self.create_loaders()
 
     def create_model(self):
         return

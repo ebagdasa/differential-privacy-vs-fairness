@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-import torchvision
+from torchvision import transforms
 import os
 from sklearn.model_selection import train_test_split
 
@@ -27,8 +27,20 @@ def get_idxs(n, is_train, seed=23985, train_frac=0.9):
         return test_idxs
 
 
+def get_dsprites_transforms(is_train, normalize):
+    if is_train:
+        assert normalize
+        return transforms.Compose(
+            [transforms.ToTensor(), transforms.Normalize(mu_dsprites, std_dsprites)])
+    else:
+        if normalize:
+            transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize(mu_dsprites, std_dsprites)])
+        return transforms.ToTensor()
+
+
 class DspritesDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir, is_train, target_colname="scale",
+    def __init__(self, root_dir, is_train, normalize, target_colname="scale",
                  attribute_colname="shape", majority_group_keys=(2,)):
         self.target_colname = target_colname
         self.attribute_colname = attribute_colname
@@ -42,6 +54,7 @@ class DspritesDataset(torch.utils.data.Dataset):
         #  see https://github.com/deepmind/dsprites-dataset for more info.
         self.latents_values = dsprites["latents_values"][idxs]
         self.latents_classes = dsprites["latents_classes"][idxs]
+        self.transforms = get_dsprites_transforms(self.is_train, normalize)
 
     @property
     def targets(self):

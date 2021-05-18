@@ -24,11 +24,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
 
-TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
+TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow', 'dsprites')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow', 'dsprites')
 
 
 def maybe_override_parameter(params: dict, args, parameter_name: str):
@@ -83,6 +83,8 @@ def load_data(helper, params, alpha, mu):
         helper.load_lfw_data()
     elif helper.params['dataset'] == 'zillow':
         helper.load_zillow_data()
+    elif helper.params['dataset'] == 'dsprites':
+        helper.load_dsprites_data()
     else:
         # First, define classes_to_keep.
         # Labels are assigned in order of index in this array; so minority_key has
@@ -138,7 +140,6 @@ def compute_channelwise_mean(dataset):
         sds[1].append(torch.std(x[:, 1, ...]))
         means[2].append(torch.mean(x[:, 2, ...]))
         sds[2].append(torch.std(x[:, 2, ...]))
-
     # We ignore the last batch in case it is incomplete.
     print("Channel 0 mean: %f" % mean_of_tensor_list(means[0][:-1]))
     print("Channel 1 mean: %f" % mean_of_tensor_list(means[1][:-1]))
