@@ -6,20 +6,25 @@ import torch
 from math import sqrt
 from math import log as ln
 from numpy.random import default_rng
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, RidgeCV
 
 RANDOM_SEED = 983445
 
 
-def get_wstar(df):
+def get_wstar(df, use_ridge=False, ridgegrid=[0.001, 0.01, 0.1, 1., 10, 100, 1000]):
     """Compute the parameters via OLS (with no intercept term).
 
     If an intercept term is desired, add an 'intercept' column to the
         design matrix of all ones.
     """
-    lr = LinearRegression(fit_intercept=False) \
-        .fit(X=df.drop(['sensitive', 'target'], axis=1), y=df['target'])
-    return lr.coef_
+    if use_ridge:
+        est = RidgeCV(alphas=ridgegrid, fit_intercept=False, cv=10) \
+            .fit(X=df.drop(['sensitive', 'target'], axis=1), y=df['target'])
+        print("[INFO] CV selected regularization parameter {}".format(est.alpha_))
+    else:
+        est = LinearRegression(fit_intercept=False) \
+            .fit(X=df.drop(['sensitive', 'target'], axis=1), y=df['target'])
+    return est.coef_
 
 
 def compute_mse(X, y, w_hat):
