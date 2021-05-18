@@ -20,43 +20,46 @@ class SimpleNet(nn.Module):
     def __init__(self, name=None, created_time=None):
         super(SimpleNet, self).__init__()
         self.created_time = created_time
-        self.name=name
+        self.name = name
         reseed()
-
-
 
     def visualize(self, vis, epoch, acc, loss=None, eid='main', is_dp=False, name=None):
         if name is None:
             name = self.name + '_poisoned' if is_dp else self.name
-        vis.line(X=np.array([epoch]), Y=np.array([acc]), name=name, win='vacc_{0}'.format(self.created_time), env=eid,
-                                update='append' if vis.win_exists('vacc_{0}'.format(self.created_time), env=eid) else None,
-                                opts=dict(showlegend=True, title='Accuracy_{0}'.format(self.created_time),
-                                          width=700, height=400))
+        vis.line(X=np.array([epoch]), Y=np.array([acc]), name=name,
+                 win='vacc_{0}'.format(self.created_time), env=eid,
+                 update='append' if vis.win_exists('vacc_{0}'.format(self.created_time),
+                                                   env=eid) else None,
+                 opts=dict(showlegend=True,
+                           title='Accuracy_{0}'.format(self.created_time),
+                           width=700, height=400))
         if loss is not None:
             vis.line(X=np.array([epoch]), Y=np.array([loss]), name=name, env=eid,
-                                     win='vloss_{0}'.format(self.created_time),
-                                     update='append' if vis.win_exists('vloss_{0}'.format(self.created_time), env=eid) else None,
-                                     opts=dict(showlegend=True, title='Loss_{0}'.format(self.created_time), width=700, height=400))
+                     win='vloss_{0}'.format(self.created_time),
+                     update='append' if vis.win_exists(
+                         'vloss_{0}'.format(self.created_time), env=eid) else None,
+                     opts=dict(showlegend=True,
+                               title='Loss_{0}'.format(self.created_time), width=700,
+                               height=400))
 
         return
 
+    def train_vis(self, vis, epoch, data_len, batch, loss, eid='main', name=None,
+                  win='vtrain'):
 
-
-    def train_vis(self, vis, epoch, data_len, batch, loss, eid='main', name=None, win='vtrain'):
-
-        vis.line(X=np.array([(epoch-1)*data_len+batch]), Y=np.array([loss]),
-                                 env=eid,
-                                 name=f'{name}' if name is not None else self.name, win=f'{win}_{self.created_time}',
-                                 update='append' if vis.win_exists(f'{win}_{self.created_time}', env=eid) else None,
-                                 opts=dict(showlegend=True, width=700, height=400, title='Train loss_{0}'.format(self.created_time)))
-
-
+        vis.line(X=np.array([(epoch - 1) * data_len + batch]), Y=np.array([loss]),
+                 env=eid,
+                 name=f'{name}' if name is not None else self.name,
+                 win=f'{win}_{self.created_time}',
+                 update='append' if vis.win_exists(f'{win}_{self.created_time}',
+                                                   env=eid) else None,
+                 opts=dict(showlegend=True, width=700, height=400,
+                           title='Train loss_{0}'.format(self.created_time)))
 
     def save_stats(self, epoch, loss, acc):
         self.stats['epoch'].append(epoch)
         self.stats['loss'].append(loss)
         self.stats['acc'].append(acc)
-
 
     def copy_params(self, state_dict, coefficient_transfer=100):
 
@@ -66,13 +69,13 @@ class SimpleNet(nn.Module):
             if name in own_state:
                 shape = param.shape
                 #
-                random_tensor = (torch.cuda.FloatTensor(shape).random_(0, 100) <= coefficient_transfer).type(
+                random_tensor = (torch.cuda.FloatTensor(shape).random_(0,
+                                                                       100) <=
+                                 coefficient_transfer).type(
                     torch.cuda.FloatTensor)
-                negative_tensor = (random_tensor*-1)+1
+                negative_tensor = (random_tensor * -1) + 1
                 # own_state[name].copy_(param)
                 own_state[name].copy_(param.clone())
-
-
 
 
 class Net(SimpleNet):
@@ -94,17 +97,34 @@ class Net(SimpleNet):
         return F.log_softmax(x, dim=1)
 
 
-class RegressionNet(Net):
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4 * 4 * 50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return torch.squeeze(x, 1)
+class RegressionNet(SimpleNet):
+    def __init__(self):
+        super(RegressionNet, self).__init__()
+        self.model = torch.nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(16, 16, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(16, 32, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Flatten(),
+            nn.Linear(36864, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
 
+    def forward(self, x):
+        output = self.model(x)
+        return torch.squeeze(output, 1)
 
 
 class FlexiNet(SimpleNet):
@@ -116,13 +136,12 @@ class FlexiNet(SimpleNet):
         self.fc2 = nn.Linear(500, output_dim)
 
     def forward(self, x):
-            x = self.conv1(x)
-            x = F.relu(x)
-            x = F.max_pool2d(x, 2, 2)
-            x = F.relu(self.conv2(x))
-            x = F.max_pool2d(x, 2, 2)
-            x = x.view(-1, 5 * 5 * 50)
-            x = F.relu(self.fc1(x))
-            x = self.fc2(x)
-            return F.log_softmax(x, dim=1)
-
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 5 * 5 * 50)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=1)

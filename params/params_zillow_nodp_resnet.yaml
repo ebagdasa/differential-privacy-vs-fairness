@@ -1,0 +1,24 @@
+test_batch_size: 100
+batch_size: 64
+num_microbatches: 64
+lr: 0.001
+momentum: 0.9
+decay: 5e-4
+dp: False
+epochs: 1000
+save_on_epochs: [250, 500, 750, 999]
+criterion: mse
+
+#mu: 1.0
+#ds_size: 70000
+
+save_model: True
+dataset: zillow
+model: PretrainedRegressionRes
+freeze_pretrained_weights: False
+scheduler: False
+optimizer: Adam
+
+root_dir: /projects/grail/jpgard/zillow-houses
+
+multi_gpu: False

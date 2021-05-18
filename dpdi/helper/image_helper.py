@@ -19,6 +19,7 @@ from dpdi.datasets.celeba_dataset import CelebADataset, get_celeba_transforms
 from dpdi.datasets.lfw_dataset import LFWDataset, get_lfw_transforms
 from dpdi.datasets.mnist_dataset import MNISTWithAttributesDataset
 from dpdi.datasets.mc10_dataset import CIFAR10WithAttributesDataset
+from dpdi.datasets.zillow_dataset import ZillowDataset
 from collections import OrderedDict
 
 
@@ -405,6 +406,34 @@ class ImageHelper(Helper):
 
         return True
 
+    def make_loaders(self):
+        self.train_loader = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
+            num_workers=8, drop_last=True, pin_memory=True)
+
+        self.unnormalized_test_loader = torch.utils.data.DataLoader(
+            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
+            shuffle=True,
+            num_workers=8, drop_last=True)
+
+        self.test_loader = torch.utils.data.DataLoader(
+            self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
+            num_workers=8)
+
+    def load_zillow_data(self):
+        self.train_dataset = ZillowDataset(
+            self.params['root_dir'], is_train=True, normalize=True)
+        self.unnormalized_test_dataset = ZillowDataset(
+            self.params['root_dir'], is_train=False, normalize=False
+        )
+        self.test_dataset = ZillowDataset(
+            self.params['root_dir'], is_train=False, normalize=True
+        )
+
+        self.make_loaders()
+
+
+
     def load_celeba_data(self):
         transform_train = get_celeba_transforms('train')
         transform_test = get_celeba_transforms('test')
@@ -446,17 +475,7 @@ class ImageHelper(Helper):
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
 
-        self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
-            num_workers=8, drop_last=True)
-
-        self.unnormalized_test_loader = torch.utils.data.DataLoader(
-            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=8, drop_last=True)
-
-        self.test_loader = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=2)
+        self.make_loaders()
 
     def load_lfw_data(self):
         transform_train = get_lfw_transforms('train')
@@ -496,107 +515,7 @@ class ImageHelper(Helper):
                     f"len_train: {len(self.train_dataset)}, "
                     f"len_test: {len(self.test_dataset)}")
 
-        self.train_loader = torch.utils.data.DataLoader(
-            self.train_dataset, batch_size=self.params['batch_size'], shuffle=True,
-            num_workers=8, drop_last=True)
-
-        self.test_loader = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=self.params['test_batch_size'], shuffle=True,
-            num_workers=2)
-
-        self.unnormalized_test_loader = torch.utils.data.DataLoader(
-            self.unnormalized_test_dataset, batch_size=self.params['test_batch_size'],
-            shuffle=True,
-            num_workers=2
-        )
-
-    def load_dif_data(self):
-
-        mu_data = [0.485, 0.456, 0.406]
-        std_data = [0.229, 0.224, 0.225]
-        im_size = [80, 80]
-        crop_size = [64, 64]
-        brightness = 0.4
-        contrast = 0.4
-        saturation = 0.4
-        hue = 0.25
-
-        resize = transforms.Resize(im_size)
-        rotate = transforms.RandomRotation(degrees=30)
-        crop = transforms.RandomCrop(crop_size)
-        flip_aug = transforms.RandomHorizontalFlip()
-
-        normalize = transforms.Normalize(mean=mu_data, std=std_data)
-
-        center_crop = transforms.CenterCrop(crop_size)
-        transform_train = transforms.Compose([resize, rotate, crop,
-                                              flip_aug, transforms.ToTensor(),
-                                              normalize])
-
-        transform_test = transforms.Compose([resize, center_crop, transforms.ToTensor(), normalize])
-
-        self.train_dataset = DiFDataset(class_list=self.params['class_list'],
-                                        root_dir=self.params['root_dir'],
-                                        crop_list=self.params['crop_list'],
-                                        transform=transform_train)
-
-        self.test_dataset = DiFDataset(class_list=self.params['class_list'],
-                                       root_dir=self.params['root_dir'],
-                                       crop_list=self.params['crop_list'],
-                                       transform=transform_test)
-
-        indices_train = torch.load(self.params['indices_train'])
-        indices_test = torch.load(self.params['indices_test'])
-        self.labels = list()
-        combined_train = list()
-        combined_test = list()
-        for key, value in indices_train.items():
-            combined_train.extend(value)
-            self.labels.append(key)
-
-        self.labels = sorted(self.labels)
-        t_l = list()
-        for key, value in indices_test.items():
-            combined_test.extend(value)
-            t_l.append(key)
-        logger.info(f"Loaded dataset: labels: {self.labels}, len_train: {len(combined_train)}, len_test: {len(combined_test)} labels: {t_l}")
-
-        train_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_train)
-        test_sampler = torch.utils.data.sampler.SubsetRandomSampler(indices=combined_test)
-
-        self.train_loader = torch.utils.data.DataLoader(self.train_dataset,
-                                                        batch_size=self.params['batch_size'],
-                                                        sampler=train_sampler,
-                                                        num_workers=2, drop_last=True)
-
-        self.test_loader = torch.utils.data.DataLoader(self.test_dataset,
-                                                       batch_size=self.params['test_batch_size'],
-                                                       sampler=test_sampler,
-                                                       num_workers=2)
-        self.dataset_size = len(combined_train)
-        self.label_skin_list = torch.load(self.params['label_skin_list'])
-
-        return True
-
-
-    def load_jigsaw(self):
-        import pickle
-        import pandas as pd
-
-        max_features = 50000
-
-        train = pd.read_csv('data/jigsaw/processed_train.csv')
-        test = pd.read_csv('data/jigsaw/processed_test.csv')
-        # after processing some of the texts are emply
-        train['comment_text'] = train['comment_text'].fillna('')
-        test['comment_text'] = test['comment_text'].fillna('')
-        with open(f'data/jigsaw/tokenizer_{max_features}.pickle', 'rb') as f:
-            tokenizer = pickle.load(f)
-
-        X_train = tokenizer.texts_to_sequences(train['comment_text'])
-        X_test = tokenizer.texts_to_sequences(test['comment_text'])
-        x_train_lens = [len(i) for i in X_train]
-        x_test_lens = [len(i) for i in X_test]
+        self.make_loaders()
 
     def create_model(self):
         return
@@ -639,6 +558,8 @@ class ImageHelper(Helper):
             num_classes = len(self.labels)
         elif self.params['dataset'] == 'lfw':
             num_classes = len(self.labels)
+        elif self.params['dataset'] == 'zillow':
+            num_classes = None
         else:
             num_classes = 10
         return num_classes

@@ -1,6 +1,7 @@
 import logging
 
-from dpdi.models.word_model import RNNModel
+from dpdi.helper import get_helper
+from dpdi.models import get_net
 
 logger = logging.getLogger('logger')
 
@@ -9,19 +10,13 @@ import argparse
 from scipy import ndimage
 from collections import defaultdict
 from tensorboardX import SummaryWriter
-import torchvision.models as models
-from dpdi.models.mobilenet import MobileNetV2
-from dpdi.helper.image_helper import ImageHelper
-from dpdi.models.densenet import DenseNet
-from dpdi.models.simple import Net, FlexiNet, reseed, RegressionNet
-from dpdi.models.resnet import get_resnet_extractor, get_pretrained_resnet
+from dpdi.models.simple import reseed
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import yaml
 from dpdi.utils.text_load import *
 from dpdi.utils.utils import create_table, plot_confusion_matrix
-from dpdi.models.inception import *
 import pandas as pd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -29,16 +24,11 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # These are datasets that yield tuples of (images, idxs, labels) instead of
 # (images,labels).
 
-TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
+TRIPLET_YIELDING_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
 
 # These are datasets where we explicitly track performance according to some majority/minority
 # attribute defined in the params.
-MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10')
-
-
-def get_helper(params, d, name):
-    helper = ImageHelper(current_time=d, params=params, name=name)
-    return helper
+MINORITY_PERFORMANCE_TRACK_DATASETS = ('celeba', 'lfw', 'mnist', 'cifar10', 'zillow')
 
 
 def maybe_override_parameter(params: dict, args, parameter_name: str):
@@ -63,46 +53,6 @@ def get_optimizer(helper):
     return optimizer
 
 
-def get_net(helper, num_classes):
-    if helper.params['model'] == 'densenet':
-        net = DenseNet(num_classes=num_classes, depth=helper.params['densenet_depth'])
-    elif helper.params['model'] == 'resnet':
-        logger.info(f'Model size: {num_classes}')
-        net = models.resnet18(num_classes=num_classes)
-    elif helper.params['model'] == 'PretrainedRes':
-        net = get_pretrained_resnet(num_classes,
-                                    helper.params['freeze_pretrained_weights'])
-        net = net.cuda()
-    elif helper.params['model'] == 'PretrainedResExtractor':
-        net = get_resnet_extractor(num_classes,
-                                   helper.params['freeze_pretrained_weights'])
-    elif helper.params['model'] == 'FlexiNet':
-        net = FlexiNet(3, num_classes)
-    elif helper.params['model'] == 'inception':
-        net = inception_v3(pretrained=True)
-        net.fc = nn.Linear(2048, num_classes)
-        net.aux_logits = False
-        # model = torch.nn.DataParallel(model).cuda()
-    elif helper.params['model'] == 'mobilenet':
-        net = MobileNetV2(n_class=num_classes, input_size=64)
-    elif helper.params['model'] == 'word':
-        net = RNNModel(rnn_type='LSTM', ntoken=helper.n_tokens,
-                       ninp=helper.params['emsize'], nhid=helper.params['nhid'],
-                       nlayers=helper.params['nlayers'],
-                       dropout=helper.params['dropout'],
-                       tie_weights=helper.params['tied'])
-    elif helper.params['model'] == 'regressionnet':
-        net = RegressionNet(output_dim=1)
-    else:
-        net = Net(output_dim=num_classes)
-    logger.info(
-        'Total number of params for model {}: {}'.format(
-            helper.params["model"],
-            sum(p.numel() for p in net.parameters() if p.requires_grad)
-        ))
-    return net
-
-
 def get_criterion(helper):
     # For DP training, no loss reduction is used; otherwise, use default (mean) reduction.
     if helper.params.get('criterion') == 'mse':  # Case: MSE objective.
@@ -118,6 +68,7 @@ def get_criterion(helper):
             criterion = nn.CrossEntropyLoss()
     return criterion
 
+
 def load_data(helper, params, alpha, mu):
     classes_to_keep = None
     true_labels_to_binary_labels = None
@@ -130,6 +81,8 @@ def load_data(helper, params, alpha, mu):
         helper.load_celeba_data()
     elif helper.params['dataset'] == 'lfw':
         helper.load_lfw_data()
+    elif helper.params['dataset'] == 'zillow':
+        helper.load_zillow_data()
     else:
         # First, define classes_to_keep.
         # Labels are assigned in order of index in this array; so minority_key has
@@ -196,7 +149,7 @@ def compute_channelwise_mean(dataset):
     return
 
 
-def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=None):
+def add_pos_and_neg_summary_images(data_loader, is_regression, max_images=64, labels_mapping=None):
     images, idxs, labels = next(iter(data_loader))
     if labels_mapping:
         pos_labels = [k for k, v in labels_mapping.items() if v == 1]
@@ -204,14 +157,15 @@ def add_pos_and_neg_summary_images(data_loader, max_images=64, labels_mapping=No
     attr_labels = data_loader.dataset.get_attribute_annotations(idxs)
     pos_attr_idxs = idx_where_true(attr_labels == 1)
     neg_attr_idxs = idx_where_true(attr_labels == 0)
-    pos_label_images = images[labels == 1]
-    neg_label_images = images[labels == 0]
     pos_attr_images = images[pos_attr_idxs]
     neg_attr_images = images[neg_attr_idxs]
-    writer.add_images('pos_label_images', pos_label_images[:max_images, ...])
-    writer.add_images('neg_label_images', neg_label_images[:max_images, ...])
     writer.add_images('pos_attr_images', pos_attr_images[:max_images, ...])
     writer.add_images('neg_attr_images', neg_attr_images[:max_images, ...])
+    if not is_regression:
+        pos_label_images = images[labels == 1]
+        neg_label_images = images[labels == 0]
+        writer.add_images('pos_label_images', pos_label_images[:max_images, ...])
+        writer.add_images('neg_label_images', neg_label_images[:max_images, ...])
     return
 
 
@@ -222,7 +176,7 @@ def make_uid(params, args):
     number_of_entries_train = args.number_of_entries_train
     if number_of_entries_train is None:
         number_of_entries_train = params.get('number_of_entries')
-    uid = "{ds}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{ada}-dp{dp}-n{n}-{model}".format(
+    uid = "{ds}-S{S}-z{z}-sigma{sigma}-alpha-{alpha}-ada{ada}-dp{dp}-n{n}-{model}lr{lr}".format(
         ds=params['dataset'],
         S=params.get('S'),
         z=params.get('z'),
@@ -230,7 +184,8 @@ def make_uid(params, args):
         ada=params.get('adaptive_sigma', False),
         dp=str(params['dp']),
         n=number_of_entries_train,
-        model=params['model'])
+        model=params['model'],
+        lr=params['lr'])
     if alpha is not None:
         uid += '-alpha' + str(alpha)
     if params.get('fixed_n_train'):
@@ -298,9 +253,12 @@ def idx_where_true(ary):
         bool_indices = ary.values
     elif isinstance(ary, torch.Tensor):
         bool_indices = ary.detach().cpu().numpy()
+    elif isinstance(ary, np.ndarray):
+        bool_indices = ary
     else:
         raise ValueError("Got unexpected ary of type {}".format(type(ary)))
     return np.ravel(np.argwhere(bool_indices))
+
 
 def test(net, epoch, name, testloader, vis=True, mse: bool = False,
          labels_mapping: dict = None):
@@ -319,6 +277,7 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
     keys = list() if not hasattr(helper.test_dataset, 'keys') else helper.test_dataset.keys
     print("[DEBUG] detected the following keys for test metrics: {}".format(keys))
     metric_name = 'accuracy' if not mse else 'mse'
+    cls_labels = getattr(helper, "labels", [])
     with torch.no_grad():
         for data in tqdm(testloader):
             if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
@@ -332,22 +291,23 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
             if labels_mapping:
                 pos_labels = [k for k, v in labels_mapping.items() if v == 1]
                 labels_type = torch.float32 if mse else torch.long
-                binary_labels = binarize_labels_tensor(labels, pos_labels, labels_type)
+                preprocessed_labels = binarize_labels_tensor(
+                    labels, pos_labels, labels_type)
             else:
-                binary_labels = labels
+                preprocessed_labels = labels
 
-            n_test += binary_labels.size(0)
+            n_test += preprocessed_labels.size(0)
 
             if not mse:
                 _, predicted = torch.max(outputs.data, 1)
                 predict_labels.extend([x.item() for x in predicted])
-                correct_labels.extend([x.item() for x in binary_labels])
-                running_metric_total += (predicted == binary_labels).sum().item()
+                correct_labels.extend([x.item() for x in preprocessed_labels])
+                running_metric_total += (predicted == preprocessed_labels).sum().item()
                 main_test_metric = 100 * running_metric_total / n_test
-                batch_ce_loss = ce_loss(outputs, binary_labels)
+                batch_ce_loss = ce_loss(outputs, preprocessed_labels)
                 running_ce_loss_total += torch.mean(batch_ce_loss).item()
-                for l in helper.labels:
-                    loss_by_label[l].extend(batch_ce_loss[binary_labels == l])
+                for l in cls_labels:
+                    loss_by_label[l].extend(batch_ce_loss[preprocessed_labels == l])
                 if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
                     # batch_attr_labels is an array of shape [batch_size] where the
                     # ith entry is either 1/0/nan and correspond to the attribute labels
@@ -358,60 +318,60 @@ def test(net, epoch, name, testloader, vis=True, mse: bool = False,
                     for k in keys:
                         loss_by_key[k].extend(batch_ce_loss[idx_where_true(labels == k)])
             else:
-                assert labels_mapping, "provide labels_mapping to use mse."
-                running_metric_total += compute_mse(outputs, binary_labels)
+                running_metric_total += compute_mse(torch.squeeze(outputs),
+                                                    torch.squeeze(preprocessed_labels))
                 main_test_metric = running_metric_total / n_test
 
     if vis:
         plot(epoch, main_test_metric, metric_name)
         metric_list = list()
         metric_dict = dict()
-        if not mse:
+        if not mse:  # Plot the classification metrics
             fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
-                                            labels=helper.labels, normalize=True)
+                                            labels=cls_labels, normalize=True)
             writer.add_figure(figure=fig, global_step=epoch, tag='tag/normalized_cm')
             avg_test_loss = running_ce_loss_total / n_test
             plot(epoch, avg_test_loss, 'test_crossentropy_loss')
-            for l in helper.labels:
+            for l in cls_labels:
                 plot(epoch, mean_of_tensor_list(loss_by_label[l]), 'test_loss_per_class/{}'.format(l))
             for a in attributes:
                 plot(epoch, mean_of_tensor_list(loss_by_attribute[a]), 'test_loss_per_attr/{}'.format(a))
             for k in keys:
                 plot(epoch, mean_of_tensor_list(loss_by_key[k]), 'test_loss_per_key/{}'.format(k))
-        for i, class_name in enumerate(helper.labels):
+        for i, class_name in enumerate(cls_labels):
             if not mse:
                 metric_value = cm[i][i] / cm[i].sum() * 100
                 fig, cm = plot_confusion_matrix(correct_labels, predict_labels,
-                                                labels=helper.labels, normalize=False)
+                                                labels=cls_labels, normalize=False)
                 cm_name = f'{helper.params["folder_path"]}/cm_{epoch}.pt'
                 torch.save(cm, cm_name)
                 writer.add_figure(figure=fig, global_step=epoch,
                                   tag='tag/unnormalized_cm')
             else:
                 metric_value = per_class_mse(
-                    outputs, binary_labels, class_name,
+                    outputs, preprocessed_labels, class_name,
                     grouped_label=labels_mapping[class_name]
                 ).cpu().numpy()
             metric_dict[class_name] = metric_value
             logger.info(f'Class: {i}, {class_name}: {metric_value}')
             plot(epoch, metric_value, name=f'{metric_name}_per_class/class_{class_name}')
             metric_list.append(metric_value)
-
-        fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class',
-                                    accuracy=main_test_metric)
-        writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
-        torch.save(metric_dict,
-                   f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
-
-        plot(epoch, np.var(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_var')
-        plot(epoch, np.max(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_max')
-        plot(epoch, np.min(metric_list),
-             name=f'{metric_name}_per_class/{metric_name}_min')
-        plot(epoch, np.max(metric_list) - np.min(metric_list),
-             name=f'{metric_name}_intra_class_max_diff/'
-                  f'{metric_name}_intra_class_max_diff')
+        if len(metric_dict):
+            fig2 = helper.plot_acc_list(metric_dict, epoch, name='per_class',
+                                        accuracy=main_test_metric)
+            writer.add_figure(figure=fig2, global_step=epoch, tag='tag/per_class')
+            torch.save(metric_dict,
+                       f"{helper.folder_path}/test_{metric_name}_class_{epoch}.pt")
+        if len(metric_list):
+            plot(epoch, np.var(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_var')
+            plot(epoch, np.max(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_max')
+            plot(epoch, np.min(metric_list),
+                 name=f'{metric_name}_per_class/{metric_name}_min')
+            plot(epoch, np.max(metric_list) - np.min(metric_list),
+                 name=f'{metric_name}_intra_class_max_diff/'
+                      f'{metric_name}_intra_class_max_diff')
 
     return main_test_metric
 
@@ -434,7 +394,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
              adaptive_sigma=False):
     norm_type = 2
     model.train()
-    running_loss = 0.0
     label_norms = defaultdict(list)
     ssum = 0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
@@ -461,7 +420,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
             loss = criterion(outputs, labels)
 
         batch_loss = torch.mean(loss).item()
-        running_loss += batch_loss
 
         losses = torch.mean(loss.reshape(num_microbatches, -1), dim=1)
 
@@ -513,8 +471,7 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
         if i > 0 and i % 10 == 0:
             logger.info('[epoch %d, batch %5d] loss: %.3f' %
                         (epoch + 1, i + 1, batch_loss))
-            plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
-            running_loss = 0.0
+            plot(epoch * len(trainloader) + i, batch_loss, 'Train Loss')
     print(ssum)
     plot(epoch, avg_grad_norm, "norms/avg_grad_norm")
     for pos, norms in sorted(label_norms.items(), key=lambda x: x[0]):
@@ -524,7 +481,6 @@ def train_dp(trainloader, model, optimizer, epoch, sigma, alpha, labels_mapping=
 
 def train(trainloader, model, optimizer, epoch, labels_mapping=None):
     model.train()
-    running_loss = 0.0
     for i, data in tqdm(enumerate(trainloader, 0), leave=True):
         # get the inputs
         if helper.params['dataset'] in TRIPLET_YIELDING_DATASETS:
@@ -560,13 +516,8 @@ def train(trainloader, model, optimizer, epoch, labels_mapping=None):
 
         loss.backward()
         optimizer.step()
-        # logger.info statistics
-        running_loss += loss.item()
         if i > 0 and i % 20 == 0:
-            #             logger.info('[%d, %5d] loss: %.3f' %
-            #                   (epoch + 1, i + 1, running_loss / 2000))
-            plot(epoch * len(trainloader) + i, running_loss, 'Train Loss')
-            running_loss = 0.0
+            plot(epoch * len(trainloader) + i, loss.item(), 'Train Loss')
 
 
 if __name__ == '__main__':
@@ -602,7 +553,8 @@ if __name__ == '__main__':
 
     name = make_uid(params, args)
 
-    writer = SummaryWriter(log_dir=os.path.join(args.logdir, name))
+    uid_logdir = os.path.join(args.logdir, name)
+    writer = SummaryWriter(log_dir=uid_logdir)
 
     helper = get_helper(params, d, name)
     logger.addHandler(logging.FileHandler(filename=f'{helper.folder_path}/log.txt'))
@@ -629,7 +581,7 @@ if __name__ == '__main__':
     alpha = args.alpha
     adaptive_sigma = helper.params.get('adaptive_sigma', False)
     dp = helper.params['dp']
-    mu = helper.params['mu']
+    mu = helper.params.get('mu')
 
     reseed(5)
 
@@ -661,10 +613,12 @@ if __name__ == '__main__':
         helper.start_epoch = 1
 
     criterion = get_criterion(helper)
+    is_regression = helper.params.get('criterion') == 'mse'
 
     # Write sample images, for the image classification tasks
     if helper.params['dataset'] in MINORITY_PERFORMANCE_TRACK_DATASETS:
         add_pos_and_neg_summary_images(helper.unnormalized_test_loader,
+                                       is_regression,
                                        labels_mapping=true_labels_to_binary_labels)
 
         # Skip channelwise mean for MNIST; it only has one channel and means are known.
@@ -680,28 +634,30 @@ if __name__ == '__main__':
     table = create_table(helper.params)
     writer.add_text('Model Params', table)
     logger.info(table)
-    logger.info(helper.labels)
-    metric_name = 'mse' if helper.params.get('criterion') == 'mse' else 'accuracy'
+    metric_name = 'mse' if is_regression else 'accuracy'
 
     epoch = 0
     test_loss = test(net, epoch, name, helper.test_loader,
                      mse=metric_name == 'mse',
                      labels_mapping=true_labels_to_binary_labels)
 
-    for epoch in range(helper.start_epoch,
-                       epochs):  # loop over the dataset multiple times
-        if dp:
-            train_dp(helper.train_loader, net, optimizer, epoch,
-                     labels_mapping=true_labels_to_binary_labels,
-                     sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
-        else:
-            train(helper.train_loader, net, optimizer, epoch,
-                  labels_mapping=true_labels_to_binary_labels)
-        if helper.params['scheduler']:
-            scheduler.step()
-        test_loss = test(net, epoch, name, helper.test_loader,
-                         mse=metric_name == 'mse',
-                         labels_mapping=true_labels_to_binary_labels)
-        helper.save_model(net, epoch, test_loss)
+    try:
+        for epoch in range(helper.start_epoch, epochs):
+            if dp:
+                train_dp(helper.train_loader, net, optimizer, epoch,
+                         labels_mapping=true_labels_to_binary_labels,
+                         sigma=sigma, alpha=alpha, adaptive_sigma=adaptive_sigma)
+            else:
+                train(helper.train_loader, net, optimizer, epoch,
+                      labels_mapping=true_labels_to_binary_labels)
+            if helper.params['scheduler']:
+                scheduler.step()
+            test_loss = test(net, epoch, name, helper.test_loader,
+                             mse=metric_name == 'mse',
+                             labels_mapping=true_labels_to_binary_labels)
+            helper.save_model(net, epoch, test_loss)
+    except KeyboardInterrupt:
+        print("[KeyboardInterrupt; logged to: {}".format(uid_logdir))
+    helper.save_model(net, epoch, test_loss)
     logger.info(
         f"Finished training for model: {helper.current_time}. Folder: {helper.folder_path}")
