@@ -54,7 +54,7 @@ class DspritesDataset(torch.utils.data.Dataset):
         #  see https://github.com/deepmind/dsprites-dataset for more info.
         self.latents_values = dsprites["latents_values"][idxs]
         self.latents_classes = dsprites["latents_classes"][idxs]
-        self.transform = get_dsprites_transforms(self.is_train, normalize)
+        self.transform = get_dsprites_transforms(is_train, normalize)
 
     @property
     def targets(self):
